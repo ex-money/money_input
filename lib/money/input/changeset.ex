@@ -78,9 +78,7 @@ if Code.ensure_loaded?(Ecto.Changeset) do
           Changeset.put_change(changeset, field, money)
 
         {:error, %{__exception__: true} = exception} ->
-          Changeset.add_error(changeset, field, Exception.message(exception),
-            validation: :money
-          )
+          Changeset.add_error(changeset, field, Exception.message(exception), validation: :money)
       end
     end
 
@@ -107,8 +105,11 @@ if Code.ensure_loaded?(Ecto.Changeset) do
       value = Changeset.get_field(changeset, field)
 
       case Validator.validate_money(value, options) do
-        :ok -> changeset
-        {:error, %Money.Input.ValidationError{errors: errors}} -> add_errors(changeset, field, errors)
+        :ok ->
+          changeset
+
+        {:error, %Money.Input.ValidationError{errors: errors}} ->
+          add_errors(changeset, field, errors)
       end
     end
 
