@@ -503,13 +503,15 @@ defmodule Money.Input.Visualizer.Assets do
   @spec css() :: String.t()
   def css, do: @css
 
-  @external_resource Path.join(:code.priv_dir(:money_input), "static/money_input.css")
-  @external_resource Path.join(:code.priv_dir(:money_input), "static/money_input.js")
-  @external_resource Path.join(:code.priv_dir(:money_input), "static/money.png")
+  @external_resource Path.join(:code.priv_dir(:ex_money_input), "static/money_input.css")
+  @external_resource Path.join(:code.priv_dir(:ex_money_input), "static/money_input.js")
+  @external_resource Path.join(:code.priv_dir(:ex_money_input), "static/money.png")
 
-  @money_input_css File.read!(Path.join(:code.priv_dir(:money_input), "static/money_input.css"))
-  @money_input_js File.read!(Path.join(:code.priv_dir(:money_input), "static/money_input.js"))
-  @money_logo_png File.read!(Path.join(:code.priv_dir(:money_input), "static/money.png"))
+  @money_input_css File.read!(
+                     Path.join(:code.priv_dir(:ex_money_input), "static/money_input.css")
+                   )
+  @money_input_js File.read!(Path.join(:code.priv_dir(:ex_money_input), "static/money_input.js"))
+  @money_logo_png File.read!(Path.join(:code.priv_dir(:ex_money_input), "static/money.png"))
 
   @doc "Returns the component CSS shipped in priv/static."
   @spec money_input_css() :: String.t()

@@ -57,7 +57,7 @@ if Code.ensure_loaded?(Plug.Router) do
 
     The visualizer module is always compiled when `:plug` is
     present, but `Money.Input.Visualizer.Standalone.start/1`
-    refuses to start unless `:money_input, :visualizer` is set
+    refuses to start unless `:ex_money_input, :visualizer` is set
     to `true` in config, or `enabled: true` is passed
     explicitly. Mounting under `forward/2` in a Phoenix router
     is not gated — the host app is the one who decided to
@@ -149,7 +149,8 @@ if Code.ensure_loaded?(Plug.Router) do
     defp base_path(%Plug.Conn{script_name: []}), do: ""
     defp base_path(%Plug.Conn{script_name: segments}), do: "/" <> Enum.join(segments, "/")
 
-    defp parse_params(%Plug.Conn{} = conn, view), do: parse_params(conn.params, view, conn.assigns)
+    defp parse_params(%Plug.Conn{} = conn, view),
+      do: parse_params(conn.params, view, conn.assigns)
 
     defp parse_params(params, :input, assigns) do
       deployment_default = default_locale(assigns)

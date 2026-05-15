@@ -11,14 +11,14 @@ package — `<.number_input>` lives there.
 
 For a full end-to-end Phoenix integration walkthrough — Elixir
 deps, JS deps, asset wiring, schema, LiveView — read
-[`guides/integration.md`](guides/integration.md).
+[`guides/integration.md`](https://github.com/ex-money/money_input/blob/main/guides/integration.md).
 
 ## Installation
 
 ```elixir
 def deps do
   [
-    {:money_input, "~> 0.1.0"},
+    {:ex_money_input, "~> 0.1.0"},
 
     # Components and changeset bridge:
     {:phoenix_html, "~> 4.0"},
@@ -179,7 +179,7 @@ absent.
 
 ```elixir
 # In your dev config:
-config :money_input, visualizer: true
+config :ex_money_input, visualizer: true
 
 # Standalone:
 {:ok, _pid} = Money.Input.Visualizer.Standalone.start(port: 4002)

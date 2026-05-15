@@ -20,7 +20,7 @@ automatically by a Phoenix project but listed here for clarity.
 ```elixir
 def deps do
   [
-    {:money_input, "~> 0.1.0"},
+    {:ex_money_input, "~> 0.1.0"},
 
     # The components are activated when these are present:
     {:phoenix_html,        "~> 4.0"},
@@ -47,9 +47,14 @@ Run `mix deps.get`.
 ## 2. JavaScript dependencies
 
 The live-formatting JS hook wraps
-[AutoNumeric](https://autonumeric.org/) (battle-tested cursor
-preservation, paste sanitisation, per-locale separators). Install
-it in your `assets/` directory:
+[AutoNumeric](https://autonumeric.org/) by Alexandre Bonneau
+(MIT-licensed) — battle-tested cursor preservation, paste
+sanitisation, and per-locale separator handling. We don't
+reimplement any of that; the hook is a thin adapter that
+configures AutoNumeric from the component's locale data and lets
+it run. Credit where it's due.
+
+Install it in your `assets/` directory:
 
 ```bash
 cd assets
@@ -268,6 +273,50 @@ one shape, parsed once.
 
 ---
 
+## 7a. Why the wire format is locale-formatted (not canonical)
+
+Some form-input libraries take a different approach: the JS
+hook rewrites the input value to a canonical form
+(`"1234.56"`, dot decimal, no grouping) immediately before
+submit, so the server always receives the same shape regardless
+of locale. Call that **Option B**. It's a reasonable choice,
+but it has costs:
+
+* The server needs two parsers — one for the canonical wire
+  format, one for whatever the user actually typed if JS is
+  disabled, broken, or hadn't booted yet. The two paths drift.
+
+* Round-tripping a value the user *partially typed* through
+  canonicalisation and back is fiddly. In some locales the
+  decimal and group separators are the same characters as
+  another locale's group and decimal (e.g. `de` vs `en`). A
+  bug in the canonicaliser silently produces a 1000× wrong
+  number.
+
+* The "canonical" shape is a hidden third format that exists
+  only on the wire. It isn't what the user sees, isn't what
+  the server stores, and isn't what tests assert against.
+
+This library uses **Option A**: the JS hook never touches the
+value at submit time. Whatever AutoNumeric is currently
+displaying — locale-formatted, exactly as the user reads it —
+is what the form serialises. The server parses it with the
+locale you already have. Path A (no JS) and Path B (AutoNumeric
+loaded) produce *byte-identical* submissions for the same input.
+
+Trade-off: the server must know the locale to parse the
+amount. In practice you already do (it's in the session, the
+assigns, or a `Money.Ecto.Composite.Type` field option), so
+this is rarely a real cost.
+
+If you're porting from an Option B library, the thing to
+double-check is that you're passing `:locale` to
+`cast_money/3` — without it the parser falls back to
+`Localize.get_locale/0` which may not match the form's
+displayed locale.
+
+---
+
 ## 8. Enable the dev visualizer (optional)
 
 The visualizer is a Plug.Router that demos every component +
@@ -278,7 +327,7 @@ what the picker looks like.
 In `config/dev.exs`:
 
 ```elixir
-config :money_input, visualizer: true
+config :ex_money_input, visualizer: true
 config :localize,    allow_runtime_locale_download: true
 ```
 

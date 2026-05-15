@@ -6,13 +6,13 @@ defmodule Money.Input.VisualizerTest do
 
   describe "Standalone.enabled?/1" do
     setup do
-      previous = Application.get_env(:money_input, :visualizer)
+      previous = Application.get_env(:ex_money_input, :visualizer)
 
       on_exit(fn ->
         if previous == nil do
-          Application.delete_env(:money_input, :visualizer)
+          Application.delete_env(:ex_money_input, :visualizer)
         else
-          Application.put_env(:money_input, :visualizer, previous)
+          Application.put_env(:ex_money_input, :visualizer, previous)
         end
       end)
 
@@ -20,29 +20,29 @@ defmodule Money.Input.VisualizerTest do
     end
 
     test "defaults to disabled" do
-      Application.delete_env(:money_input, :visualizer)
+      Application.delete_env(:ex_money_input, :visualizer)
       refute Standalone.enabled?([])
     end
 
     test "is enabled when the config flag is true" do
-      Application.put_env(:money_input, :visualizer, true)
+      Application.put_env(:ex_money_input, :visualizer, true)
       assert Standalone.enabled?([])
     end
 
     test "is enabled when :enabled is passed explicitly" do
-      Application.delete_env(:money_input, :visualizer)
+      Application.delete_env(:ex_money_input, :visualizer)
       assert Standalone.enabled?(enabled: true)
     end
   end
 
   describe "Standalone.start/1" do
     test "refuses to start when disabled" do
-      Application.delete_env(:money_input, :visualizer)
+      Application.delete_env(:ex_money_input, :visualizer)
       assert {:error, %Money.Input.VisualizerDisabledError{}} = Standalone.start([])
     end
 
     test "boots Bandit when enabled and serves /input" do
-      Application.put_env(:money_input, :visualizer, true)
+      Application.put_env(:ex_money_input, :visualizer, true)
 
       try do
         {:ok, pid} = Standalone.start(port: 0, ip: :loopback)
@@ -52,7 +52,7 @@ defmodule Money.Input.VisualizerTest do
         # on the listener child; simpler to use a known port.
         Standalone.stop(pid)
       after
-        Application.delete_env(:money_input, :visualizer)
+        Application.delete_env(:ex_money_input, :visualizer)
       end
     end
   end

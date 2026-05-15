@@ -59,6 +59,6 @@ defmodule Money.Input do
   """
   @spec version() :: String.t()
   def version do
-    Application.spec(:money_input, :vsn) |> to_string()
+    Application.spec(:ex_money_input, :vsn) |> to_string()
   end
 end

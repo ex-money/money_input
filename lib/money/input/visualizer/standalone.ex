@@ -29,7 +29,7 @@ if Code.ensure_loaded?(Bandit) do
     For safety, this helper refuses to start unless the
     visualizer has been enabled — either via config:
 
-        config :money_input, visualizer: true
+        config :ex_money_input, visualizer: true
 
     …or by passing `enabled: true` to `start/1` explicitly. The
     intent is to make accidental deployment of a developer tool
@@ -52,7 +52,7 @@ if Code.ensure_loaded?(Bandit) do
       interfaces.
 
     * `:enabled` — when `true`, override the
-      `:money_input, :visualizer` config check. Default `false`.
+      `:ex_money_input, :visualizer` config check. Default `false`.
 
     ### Returns
 
@@ -65,7 +65,7 @@ if Code.ensure_loaded?(Bandit) do
 
     ### Examples
 
-        iex> Application.put_env(:money_input, :visualizer, true)
+        iex> Application.put_env(:ex_money_input, :visualizer, true)
         iex> {:ok, pid} = Money.Input.Visualizer.Standalone.start(port: 0)
         iex> :ok = Money.Input.Visualizer.Standalone.stop(pid)
 
@@ -152,7 +152,7 @@ if Code.ensure_loaded?(Bandit) do
     def enabled?(options \\ []) do
       cond do
         Keyword.get(options, :enabled) == true -> true
-        Application.get_env(:money_input, :visualizer) == true -> true
+        Application.get_env(:ex_money_input, :visualizer) == true -> true
         true -> false
       end
     end

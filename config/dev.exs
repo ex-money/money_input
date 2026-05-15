@@ -5,7 +5,7 @@ import Config
 # This is the only config the visualizer needs to run; the
 # default locale (`:en`) and its currency (USD) resolve out of
 # the box.
-config :money_input, visualizer: true
+config :ex_money_input, visualizer: true
 
 # Optional: turn on for full-fidelity exploration if you want
 # the locale dropdown to be able to load every CLDR locale on

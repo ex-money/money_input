@@ -7,7 +7,7 @@ defmodule Money.Input.VisualizerDisabledError do
   accidentally shipping to production, the standalone helper
   refuses to start unless either:
 
-  * `config :money_input, visualizer: true` is set in the host
+  * `config :ex_money_input, visualizer: true` is set in the host
     app's config, or
 
   * `start/1` is called with `enabled: true` explicitly.
@@ -23,7 +23,7 @@ defmodule Money.Input.VisualizerDisabledError do
 
   @impl true
   def message(%__MODULE__{}) do
-    "Money.Input.Visualizer is disabled. Set `config :money_input, " <>
+    "Money.Input.Visualizer is disabled. Set `config :ex_money_input, " <>
       "visualizer: true` or pass `enabled: true` to start/1."
   end
 end
