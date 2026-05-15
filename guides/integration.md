@@ -27,11 +27,7 @@ def deps do
     {:phoenix_live_view,   "~> 1.0"},
 
     # The changeset helper activates when this is present:
-    {:ecto,                "~> 3.10"},
-
-    # The visualizer activates when these are present:
-    {:plug,                "~> 1.15", only: :dev},
-    {:bandit,              "~> 1.5",  only: :dev}
+    {:ecto,                "~> 3.10"}
   ]
 end
 ```
@@ -317,38 +313,39 @@ displayed locale.
 
 ---
 
-## 8. Enable the dev visualizer (optional)
+## 8. Try the visualizer (optional)
 
-The visualizer is a Plug.Router that demos every component +
-locale + currency combination, with the JS hooks bootstrapped
-from a CDN. Useful for quickly checking how a locale formats or
-what the picker looks like.
+Want to preview every component × locale × currency combination
+without setting up a project? The sibling
+[`money_input_playground`](https://github.com/ex-money/money_input_playground)
+package is a Plug.Router + Bandit wrapper around the visualizer.
+A live instance runs at <https://elixir-money-input.fly.dev>.
 
-In `config/dev.exs`:
+To run it locally, clone the playground repo and:
 
-```elixir
-config :ex_money_input, visualizer: true
-config :localize,    allow_runtime_locale_download: true
+```bash
+cd money_input_playground
+mix deps.get
+mix run --no-halt
+# Visit http://localhost:8080
 ```
 
-Then either mount it inside your Phoenix router…
+To mount it inside your own Phoenix dev router, add the playground
+as a dev-only dep and forward to its visualizer:
 
 ```elixir
-# in lib/my_app_web/router.ex
+# mix.exs
+{:money_input_playground, "~> 0.1", only: :dev}
+
+# router.ex
 if Mix.env() == :dev do
-  forward "/money-input", Money.Input.Visualizer
+  forward "/money-input", MoneyInputPlayground.Visualizer
 end
+
+# config/dev.exs — visualizer is gated to keep it out of prod by accident
+config :money_input_playground, visualizer: true
+config :localize, allow_runtime_locale_download: true
 ```
-
-…or run it standalone in an IEx session:
-
-```elixir
-{:ok, _pid} = Money.Input.Visualizer.Standalone.start(port: 4002)
-# Visit http://localhost:4002
-```
-
-The standalone helper refuses to boot unless the config flag is
-on, so it can't accidentally ship to production.
 
 ---
 

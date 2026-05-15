@@ -13,7 +13,14 @@ if Code.ensure_loaded?(Gettext.Backend) do
     Activated only when the host project depends on `:gettext`.
     The components module gates its `use Localize.Message.Sigils`
     call on this backend being available.
+
+    Uses `Localize.Gettext.Interpolation` so all messages can use
+    MF2 (MessageFormat 2) syntax for placeholders, plural/select
+    selectors, and inline markup — consistent with the rest of the
+    Localize ecosystem.
     """
-    use Gettext.Backend, otp_app: :ex_money_input
+    use Gettext.Backend,
+      otp_app: :ex_money_input,
+      interpolation: Localize.Gettext.Interpolation
   end
 end

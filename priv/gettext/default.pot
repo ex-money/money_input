@@ -12,36 +12,36 @@ msgid ""
 msgstr ""
 
 #: lib/money/input/components.ex:501
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "All currencies"
 msgstr ""
 
 #: lib/money/input/components.ex:308
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Choose currency"
 msgstr ""
 
 #: lib/money/input/components.ex:323
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Close currency picker"
 msgstr ""
 
 #: lib/money/input/components.ex:317
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Filter currencies"
 msgstr ""
 
 #: lib/money/input/components.ex:351
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "No matches"
 msgstr ""
 
 #: lib/money/input/components.ex:500
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Preferred"
 msgstr ""
 
 #: lib/money/input/components.ex:316
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Search code, name, country, symbol…"
 msgstr ""

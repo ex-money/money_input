@@ -1,7 +1,7 @@
 defmodule MoneyInput.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @source_url "https://github.com/ex-money/money_input"
 
   def project do
@@ -18,7 +18,7 @@ defmodule MoneyInput.MixProject do
       docs: docs(),
       elixirc_paths: elixirc_paths(Mix.env()),
       dialyzer: [
-        plt_add_apps: ~w(ecto gettext mix phoenix_html phoenix_live_view plug bandit)a,
+        plt_add_apps: ~w(ecto gettext mix phoenix_html phoenix_live_view)a,
         flags: [
           :error_handling,
           :unknown,
@@ -38,8 +38,7 @@ defmodule MoneyInput.MixProject do
 
   defp description do
     "Locale-aware money form input — <.money_input> and <.currency_picker> Phoenix HEEx " <>
-      "components, an AutoNumeric-backed JS hook, an Ecto changeset bridge, and a " <>
-      "Plug-based visualizer for local development."
+      "components, an AutoNumeric-backed JS hook, and an Ecto changeset bridge."
   end
 
   defp package do
@@ -97,10 +96,8 @@ defmodule MoneyInput.MixProject do
       ],
       Exceptions: [
         Money.Input.NoNumberSymbolsError,
-        Money.Input.ValidationError,
-        Money.Input.VisualizerDisabledError
-      ],
-      Visualizer: ~r/^Money\.Input\.Visualizer(\.|$)/
+        Money.Input.ValidationError
+      ]
     ]
   end
 
@@ -111,10 +108,7 @@ defmodule MoneyInput.MixProject do
       {:phoenix_html, "~> 4.0", optional: true},
       {:phoenix_live_view, "~> 1.0", optional: true},
       {:ecto, "~> 3.10", optional: true},
-      {:gettext, "~> 1.0", optional: true},
-      {:localize_web, "~> 0.7", optional: true},
-      {:plug, "~> 1.15", optional: true},
-      {:bandit, "~> 1.5", optional: true},
+      {:gettext, "~> 1.0"},
       {:ex_doc, "~> 0.30", only: [:dev, :release], runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false}
     ] ++ maybe_json_polyfill()

@@ -18,9 +18,10 @@ defmodule Money.Input do
     and `<.currency_picker>` plus an AutoNumeric-backed JS hook
     in `priv/static/money_input.js`.
 
-  * **Visualizer** — `Money.Input.Visualizer` (compiled when
-    `:plug` is loaded) for local development. Behind a config
-    flag — see that module.
+  For a Plug-based visualizer that demos every component across
+  CLDR locales and currencies, see the sibling
+  [`money_input_playground`](https://github.com/ex-money/money_input_playground)
+  package — useful during local development, deployable to Fly.io.
 
   For plain *number* inputs (no currency), see the sibling
   [`localize_inputs`](https://hex.pm/packages/localize_inputs)

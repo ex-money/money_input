@@ -1,40 +1,29 @@
 # Money.Input
 
-Locale-aware money form input — `<.money_input>` and
-`<.currency_picker>` Phoenix HEEx components, an
-AutoNumeric-backed JS hook, an Ecto changeset bridge, and a
-Plug-based visualizer for local development.
+Locale-aware money form input — `<.money_input>` and `<.currency_picker>` Phoenix HEEx components, an AutoNumeric-backed JS hook, and an Ecto changeset bridge.
 
-For a plain *number* input (no currency), see the sibling
-[`localize_inputs`](https://hex.pm/packages/localize_inputs)
-package — `<.number_input>` lives there.
+For a plain *number* input (no currency), see the sibling [`localize_inputs`](https://hex.pm/packages/localize_inputs) package — `<.number_input>` lives there.
 
-For a full end-to-end Phoenix integration walkthrough — Elixir
-deps, JS deps, asset wiring, schema, LiveView — read
-[`guides/integration.md`](https://github.com/ex-money/money_input/blob/main/guides/integration.md).
+For a full end-to-end Phoenix integration walkthrough — Elixir deps, JS deps, asset wiring, schema, LiveView — read  [`guides/integration.md`](https://github.com/ex-money/money_input/blob/main/guides/integration.md).
 
 ## Installation
 
 ```elixir
 def deps do
   [
-    {:ex_money_input, "~> 0.1.0"},
+    {:ex_money_input, "~> 0.2"},
 
     # Components and changeset bridge:
     {:phoenix_html, "~> 4.0"},
     {:phoenix_live_view, "~> 1.0"},
-    {:ecto, "~> 3.10"},
-
-    # Visualizer (dev only):
-    {:plug, "~> 1.15", only: :dev},
-    {:bandit, "~> 1.5", only: :dev}
+    {:ecto, "~> 3.10"}
   ]
 end
 ```
 
-Every Phoenix/Ecto/Plug/Bandit dep is optional — the headless
-layer compiles without any of them, and each higher layer
-activates when its dep is present.
+Every Phoenix/Ecto dep is optional — the headless layer compiles without any of them, and each higher layer activates when its dep is present.
+
+For a Plug-based visualizer that demos every component across CLDR locales and currencies, see the sibling [`money_input_playground`](https://github.com/ex-money/money_input_playground) package — useful during local development, deployable to Fly.io. A live instance runs at <https://elixir-money-input.fly.dev>.
 
 ## Layered API
 
@@ -64,19 +53,14 @@ info.iso_digits        #=> 2
 info.number_system     #=> :latn
 ```
 
-**Parsing a user-typed money string is `Money.parse/2`**, which
-already handles surrounding whitespace, accounting parens, and
-currency symbols/ISO codes natively:
+Parsing a user-typed money string is `Money.parse/2`, which already handles surrounding whitespace, accounting parens, and currency symbols/ISO codes natively:
 
 ```elixir
 %Money{} = Money.parse("$1,234.56")
 %Money{} = Money.parse("(1.234,56)", locale: :de, default_currency: :EUR)
 ```
 
-**Money formatting is `Money.to_string/2`** — pass
-`currency_symbol: :none` for the amount alone (the shape a
-component would render into the input field, with the symbol
-positioned as a separate adornment):
+Money formatting is `Money.to_string/2` — pass `currency_symbol: :none` for the amount alone (the shape a component would render into the input field, with the symbol positioned as a separate adornment):
 
 ```elixir
 Money.to_string!(Money.new(:EUR, "1234.56"), locale: :de)
@@ -85,11 +69,6 @@ Money.to_string!(Money.new(:EUR, "1234.56"), locale: :de)
 Money.to_string!(Money.new(:EUR, "1234.56"), locale: :de, currency_symbol: :none)
 #=> "1.234,56"
 ```
-
-`Money.Input.Cast` vs `Money.Input.Validator`: **shape vs.
-business rules**. Cast answers "can I parse this into a Money?".
-Validator answers "is this Money acceptable under my app's
-rules?".
 
 ### 2. Ecto Changeset
 
@@ -103,9 +82,7 @@ def changeset(product, attrs) do
 end
 ```
 
-When the field isn't typed as `Money.Ecto.Composite.Type` (which
-casts the map shape automatically), use
-`Money.Input.Changeset.cast_money/3` first.
+When the field isn't typed as `Money.Ecto.Composite.Type` (which casts the map shape automatically), use `Money.Input.Changeset.cast_money/3` first.
 
 ### 3. HEEx components
 
@@ -131,18 +108,15 @@ casts the map shape automatically), use
 />
 ```
 
-Import them via `import Money.Input.Components` in your view or
-`use` block.
+Import them via `import Money.Input.Components` in your view or `use` block.
 
-The `<.money_input>` field always submits **two nested keys**,
-whether the picker is on or not:
+The `<.money_input>` field always submits two nested keys, whether the picker is on or not:
 
 ```
 params["product"]["price"] = %{"amount" => "1234.56", "currency" => "USD"}
 ```
 
-That shape is exactly what `Money.Ecto.Composite.Type.cast/1` and
-`Money.Input.Changeset.cast_money/3` accept directly.
+That shape is exactly what `Money.Ecto.Composite.Type.cast/1` and `Money.Input.Changeset.cast_money/3` accept directly.
 
 ### 4. JS hook (AutoNumeric)
 
@@ -173,29 +147,6 @@ And in your CSS:
 
 Without AutoNumeric loaded the inputs still work — only live formatting and cursor preservation are
 absent.
-
-## Visualizer
-
-```elixir
-# In your dev config:
-config :ex_money_input, visualizer: true
-
-# Standalone:
-{:ok, _pid} = Money.Input.Visualizer.Standalone.start(port: 4002)
-# Visit http://localhost:4002
-
-# Or mount into Phoenix:
-forward "/money-input", Money.Input.Visualizer
-```
-
-Views:
-
-* `/input` — live HEEx renders of the actual components. Picks locale + currency, embeds the picker, mounts AutoNumeric from jsdelivr so the live behaviour is observable.
-* `/parse` — one input × every locale (separator inversion, paste tolerance).
-* `/format` — one parsed value × every locale.
-* `/locale` — `Money.Input.Currency.currency_for_locale/2` snapshot per locale.
-
-The standalone helper refuses to start unless the config flag is set or `enabled: true` is passed explicitly, so a developer tool can't deploy to production by accident.
 
 ## License
 

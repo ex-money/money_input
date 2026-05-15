@@ -11,36 +11,36 @@ msgstr ""
 "Language: ja\n"
 
 #: lib/money/input/components.ex:501
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "All currencies"
 msgstr "すべての通貨"
 
 #: lib/money/input/components.ex:308
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Choose currency"
 msgstr "通貨を選択"
 
 #: lib/money/input/components.ex:323
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Close currency picker"
 msgstr "通貨選択を閉じる"
 
 #: lib/money/input/components.ex:317
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Filter currencies"
 msgstr "通貨を絞り込む"
 
 #: lib/money/input/components.ex:351
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "No matches"
 msgstr "一致する項目がありません"
 
 #: lib/money/input/components.ex:500
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Preferred"
 msgstr "お気に入り"
 
 #: lib/money/input/components.ex:316
-#, elixir-autogen, elixir-format
+#, elixir-autogen, icu-format
 msgid "Search code, name, country, symbol…"
 msgstr "コード、名前、国、記号で検索…"
