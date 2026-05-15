@@ -111,7 +111,21 @@ defmodule Money.Input.Visualizer.Assets do
     gap: 1.5rem;
     margin-bottom: 1rem;
   }
-  .mi-brand { text-decoration: none; color: inherit; display: block; }
+  .mi-brand {
+    text-decoration: none;
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .mi-brand-text { display: flex; flex-direction: column; }
+  .mi-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    flex: 0 0 auto;
+    box-shadow: var(--mi-shadow-sm);
+  }
   .mi-brand h1 {
     font-size: 1.25rem;
     margin: 0 0 0.15rem;
@@ -491,9 +505,11 @@ defmodule Money.Input.Visualizer.Assets do
 
   @external_resource Path.join(:code.priv_dir(:money_input), "static/money_input.css")
   @external_resource Path.join(:code.priv_dir(:money_input), "static/money_input.js")
+  @external_resource Path.join(:code.priv_dir(:money_input), "static/money.png")
 
   @money_input_css File.read!(Path.join(:code.priv_dir(:money_input), "static/money_input.css"))
   @money_input_js File.read!(Path.join(:code.priv_dir(:money_input), "static/money_input.js"))
+  @money_logo_png File.read!(Path.join(:code.priv_dir(:money_input), "static/money.png"))
 
   @doc "Returns the component CSS shipped in priv/static."
   @spec money_input_css() :: String.t()
@@ -502,4 +518,14 @@ defmodule Money.Input.Visualizer.Assets do
   @doc "Returns the JS hooks shipped in priv/static."
   @spec money_input_js() :: String.t()
   def money_input_js, do: @money_input_js
+
+  @doc """
+  Returns the binary PNG bytes of the Money library's logo.
+
+  Compiled into the BEAM at build time so the visualizer and
+  any wrapper app (e.g. `money_input_playground`) can serve it
+  without a separate static-files plug.
+  """
+  @spec logo_png() :: binary()
+  def logo_png, do: @money_logo_png
 end

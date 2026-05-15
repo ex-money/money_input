@@ -124,6 +124,13 @@ defmodule Money.Input.VisualizerTest do
       assert response.resp_body =~ ".mi-header"
     end
 
+    test "/assets/logo.png serves a PNG", %{conn: conn} do
+      response = conn.("/assets/logo.png", %{})
+      assert response.status == 200
+      assert ["image/png" <> _] = Plug.Conn.get_resp_header(response, "content-type")
+      assert <<0x89, "PNG", _::binary>> = response.resp_body
+    end
+
     test "unknown route 404s", %{conn: conn} do
       response = conn.("/does-not-exist", %{})
       assert response.status == 404

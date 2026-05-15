@@ -47,6 +47,9 @@ defmodule Money.Input.Visualizer.Render do
       "<link rel=\"stylesheet\" href=\"",
       escape(base),
       "/assets/style.css\">",
+      "<link rel=\"icon\" type=\"image/png\" href=\"",
+      escape(base),
+      "/assets/logo.png\">",
       # Apply the saved theme synchronously before paint to avoid
       # a flash of the wrong palette. The script reads from
       # localStorage (set by the toggle below) and sets a
@@ -78,8 +81,14 @@ defmodule Money.Input.Visualizer.Render do
       "<div class=\"mi-header-top\">",
       "<a class=\"mi-brand\" href=\"",
       escape(base),
-      "/\"><h1>Money.Input.Visualizer</h1>",
+      "/\">",
+      "<img class=\"mi-logo\" src=\"",
+      escape(base),
+      "/assets/logo.png\" alt=\"\" width=\"40\" height=\"40\">",
+      "<div class=\"mi-brand-text\">",
+      "<h1>Money.Input.Visualizer</h1>",
       "<p>locale-aware number &amp; money input — try how it behaves across locales and currencies</p>",
+      "</div>",
       "</a>",
       theme_toggle(),
       "</div>",
