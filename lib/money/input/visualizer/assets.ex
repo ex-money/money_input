@@ -528,6 +528,5 @@ defmodule Money.Input.Visualizer.Assets do
   any wrapper app (e.g. `money_input_playground`) can serve it
   without a separate static-files plug.
   """
-  @spec logo_png() :: binary()
   def logo_png, do: @money_logo_png
 end

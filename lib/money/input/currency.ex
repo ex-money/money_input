@@ -224,8 +224,7 @@ defmodule Money.Input.Currency do
   end
 
   defp resolve_symbol_position(_currency, language_tag, number_system) do
-    with {:ok, formats} <- Format.formats_for(language_tag, number_system),
-         %{currency: pattern} when is_binary(pattern) <- formats do
+    with {:ok, %{currency: pattern}} <- Format.formats_for(language_tag, number_system) do
       {:ok, position_in_pattern(pattern)}
     end
   end

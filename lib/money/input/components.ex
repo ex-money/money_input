@@ -474,8 +474,6 @@ if Code.ensure_loaded?(Phoenix.Component) do
 
       {:ok, locale_data} = Currency.currency_for_locale(locale_id)
 
-      preferred_set = MapSet.new(preferred)
-
       preferred_rows =
         preferred
         |> Enum.map(&currency_row(&1, locale_id))
@@ -483,7 +481,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
 
       all_rows =
         allowed
-        |> Enum.reject(&MapSet.member?(preferred_set, &1))
+        |> Enum.reject(&(&1 in preferred))
         |> Enum.map(&currency_row(&1, locale_id))
         |> Enum.reject(&is_nil/1)
         |> Enum.sort_by(& &1.name)
@@ -531,9 +529,9 @@ if Code.ensure_loaded?(Phoenix.Component) do
             code: to_string(code),
             name: to_string(currency.name),
             country: Flags.country_for(code) || "",
-            symbol: currency.symbol || to_string(code),
+            symbol: currency.symbol,
             flag: flag_for(code),
-            iso_digits: currency.iso_digits || 2
+            iso_digits: currency.iso_digits
           }
 
         _ ->

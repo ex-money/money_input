@@ -97,7 +97,9 @@ defmodule Money.Input.Cast do
 
   def cast(%{} = map, options) do
     amount = Map.get(map, "amount") || Map.get(map, :amount)
-    currency = Map.get(map, "currency") || Map.get(map, :currency) || Keyword.get(options, :currency)
+
+    currency =
+      Map.get(map, "currency") || Map.get(map, :currency) || Keyword.get(options, :currency)
 
     do_cast(currency, amount, options)
   end
@@ -146,11 +148,9 @@ defmodule Money.Input.Cast do
   # them into proper exception structs at this library's
   # boundary so the public API exposes one consistent shape.
   defp normalise_money_result(%Money{} = money), do: {:ok, money}
+
   defp normalise_money_result({:error, {module, message}}) when is_atom(module),
     do: {:error, module.exception(message)}
-  defp normalise_money_result({:error, %{__exception__: true} = exception}),
-    do: {:error, exception}
-  defp normalise_money_result({:error, other}), do: {:error, other}
 
   # `Money.new/3` parses string amounts locale-aware when `:locale`
   # is supplied, so this is the bridge to our caller's locale. Any
