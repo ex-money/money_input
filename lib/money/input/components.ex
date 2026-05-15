@@ -381,13 +381,21 @@ if Code.ensure_loaded?(Phoenix.Component) do
     # locale-formatted amount string (Path A fallback path) —
     # without it, `"1.234,56"` is read as `"1.23456"`.
     defp format_amount(nil, _currency, _locale), do: ""
+    defp format_amount("", _currency, _locale), do: ""
     defp format_amount(_amount, nil, _locale), do: ""
 
     defp format_amount(amount, currency, locale) do
-      Money.to_string!(Money.new(currency, amount, locale: locale),
-        locale: locale,
-        currency_symbol: :none
-      )
+      case Money.new(currency, amount, locale: locale) do
+        %Money{} = money ->
+          Money.to_string!(money, locale: locale, currency_symbol: :none)
+
+        # Unparseable amount (non-empty garbage like "abc"). Render
+        # the input as blank — the surrounding template still keeps
+        # the user's raw text in the actual form, so they can
+        # correct it. Better than crashing the whole page.
+        {:error, _} ->
+          ""
+      end
     end
 
     # money_input receives values in four shapes; we normalise to
