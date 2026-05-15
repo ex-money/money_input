@@ -36,6 +36,10 @@ defmodule MoneyInput.MixProject do
     ]
   end
 
+  def cli do
+    [preferred_envs: [dialyzer: :dev]]
+  end
+
   defp description do
     "Locale-aware money form input — <.money_input> and <.currency_picker> Phoenix HEEx " <>
       "components, an AutoNumeric-backed JS hook, an Ecto changeset bridge, and a " <>
