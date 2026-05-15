@@ -87,22 +87,22 @@ if Code.ensure_loaded?(Plug.Router) do
     end
 
     get "/input" do
-      params = parse_params(conn.params, :input)
+      params = parse_params(conn, :input)
       html(conn, InputView.render(params, base_path(conn)))
     end
 
     get "/parse" do
-      params = parse_params(conn.params, :parse)
+      params = parse_params(conn, :parse)
       html(conn, ParseView.render(params, base_path(conn)))
     end
 
     get "/format" do
-      params = parse_params(conn.params, :format)
+      params = parse_params(conn, :format)
       html(conn, FormatView.render(params, base_path(conn)))
     end
 
     get "/locale" do
-      params = parse_params(conn.params, :locale)
+      params = parse_params(conn, :locale)
       html(conn, LocaleView.render(params, base_path(conn)))
     end
 
@@ -142,10 +142,17 @@ if Code.ensure_loaded?(Plug.Router) do
     defp base_path(%Plug.Conn{script_name: []}), do: ""
     defp base_path(%Plug.Conn{script_name: segments}), do: "/" <> Enum.join(segments, "/")
 
-    defp parse_params(params, :input) do
+    defp parse_params(%Plug.Conn{} = conn, view), do: parse_params(conn.params, view, conn.assigns)
+
+    defp parse_params(params, :input, assigns) do
+      deployment_default = default_locale(assigns)
+      locale = param_locale(params, "locale", deployment_default)
+
       %{
-        locale: param_locale(params, "locale", "en"),
-        default_currency: param_currency(params, "default_currency", "USD"),
+        locale: locale,
+        deployment_default_locale: deployment_default,
+        default_currency:
+          param_currency(params, "default_currency", default_currency_for(locale)),
         number_input: blank_default(Map.get(params, "number_input"), nil),
         money_input: blank_default(Map.get(params, "money_input"), nil),
         picker: picker_default(params),
@@ -153,33 +160,47 @@ if Code.ensure_loaded?(Plug.Router) do
       }
     end
 
-    defp parse_params(params, :parse) do
+    defp parse_params(params, :parse, assigns) do
+      locale = param_locale(params, "locale", default_locale(assigns))
+
       %{
         input: blank_default(Map.get(params, "input"), "1,234.56"),
-        currency: param_currency(params, "currency", "USD"),
+        currency: param_currency(params, "currency", default_currency_for(locale)),
         mode: atom_default(Map.get(params, "mode"), [:number, :money], :number)
       }
     end
 
-    defp parse_params(params, :format) do
+    defp parse_params(params, :format, assigns) do
+      locale = param_locale(params, "locale", default_locale(assigns))
+
       %{
         amount: blank_default(Map.get(params, "amount"), "1234567.89"),
-        currency: param_currency(params, "currency", "USD"),
+        currency: param_currency(params, "currency", default_currency_for(locale)),
         mode: atom_default(Map.get(params, "mode"), [:number, :money], :money)
       }
     end
 
-    defp parse_params(params, :locale) do
+    defp parse_params(params, :locale, assigns) do
+      locale = param_locale(params, "locale", default_locale(assigns))
+
       %{
-        currency: param_currency(params, "currency", "USD")
+        currency: param_currency(params, "currency", default_currency_for(locale))
       }
     end
 
     defp param_locale(params, key, default) do
       case Map.get(params, key) do
-        nil -> default
-        "" -> default
-        value when is_binary(value) -> value
+        nil ->
+          default
+
+        "" ->
+          default
+
+        value when is_binary(value) ->
+          # Reject locales we can't load — the alternative is a 500
+          # when the view layer tries to resolve symbols for an
+          # unknown tag. Falling back keeps the visualizer alive.
+          validate_locale(value) || default
       end
     end
 
@@ -209,6 +230,98 @@ if Code.ensure_loaded?(Plug.Router) do
     defp blank_default(nil, default), do: default
     defp blank_default("", default), do: default
     defp blank_default(value, _), do: value
+
+    # Locale priority for the visualizer's defaults:
+    #
+    #   1. `?locale=…` URL param  — handled at the call site
+    #      by `param_locale/3`.
+    #
+    #   2. `conn.assigns[:locale]` — what an upstream Phoenix
+    #      locale plug (e.g. one calling `Localize.put_locale/1`
+    #      based on the user's session) typically sets. In a
+    #      forward-mounted visualizer this is the host app's
+    #      idea of the current user's locale.
+    #
+    #   3. `Localize.get_locale/0` — the per-process or
+    #      application-level default. Used in the standalone
+    #      visualizer where no upstream plug runs.
+    #
+    # The visualizer requires zero configuration to run: `:en`
+    # is always pre-compiled by Localize and resolves to USD,
+    # so the default flow works out of the box. Other locales
+    # need to be pre-compiled OR
+    # `config :localize, allow_runtime_locale_download: true`,
+    # but that's only relevant once the user picks an exotic
+    # locale — and the helpers below degrade gracefully (no
+    # crash, fall back to `:en`/USD) when an unavailable locale
+    # arrives.
+    defp default_locale(assigns) do
+      # Assigns from a host plug may carry anything — validate
+      # them before trusting. `Localize.get_locale/0` is the
+      # final authority on "the default locale" (it's the
+      # application-level or per-process default, never a hard-
+      # coded value) so we don't validate it again or guard with
+      # a hardcoded fallback like `"en"`.
+      validate_locale(stringify_locale(assigns[:locale])) ||
+        stringify_locale(safe_get_locale())
+    end
+
+    defp safe_get_locale do
+      Localize.get_locale()
+    rescue
+      _ -> nil
+    end
+
+    defp stringify_locale(nil), do: nil
+    defp stringify_locale(locale) when is_binary(locale), do: locale
+    defp stringify_locale(locale) when is_atom(locale), do: Atom.to_string(locale)
+    defp stringify_locale(%{canonical_locale_id: id}) when is_binary(id), do: id
+    defp stringify_locale(_), do: nil
+
+    # Confirm the locale is something Localize can resolve before
+    # we hand it to the view layer. If validation fails (unknown
+    # tag, download disabled, etc.) we return `nil` so the caller
+    # falls through to the next priority level. This keeps the
+    # visualizer alive when a host app passes a stale or exotic
+    # locale via `conn.assigns[:locale]`.
+    defp validate_locale(nil), do: nil
+
+    defp validate_locale(locale) do
+      case Localize.validate_locale(locale) do
+        {:ok, _tag} -> locale
+        _ -> nil
+      end
+    rescue
+      _ -> nil
+    end
+
+    # Returns the locale's natural ISO 4217 tender as a string
+    # (en-AU → "AUD", ja-JP → "JPY"). When the lookup misses for
+    # the given locale, fall back through `Localize.get_locale/0`
+    # rather than a hard-coded currency — "the default locale's
+    # currency" is the right semantics, whatever that locale
+    # happens to be in this deployment.
+    defp default_currency_for(locale) do
+      with :error <- lookup_currency(locale) do
+        case lookup_currency(safe_get_locale()) do
+          :error -> nil
+          code -> code
+        end
+      end
+    end
+
+    defp lookup_currency(nil), do: :error
+
+    defp lookup_currency(locale) do
+      case Localize.Currency.current_currency_from_locale(locale) do
+        {:ok, code} when is_atom(code) -> Atom.to_string(code)
+        _ -> :error
+      end
+    rescue
+      _ -> :error
+    catch
+      _, _ -> :error
+    end
 
     # Defaults the currency picker on. After a form submission we
     # trust whatever the checkbox sent (absent = unchecked = off);

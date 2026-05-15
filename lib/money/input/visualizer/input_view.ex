@@ -24,23 +24,21 @@ defmodule Money.Input.Visualizer.InputView do
 
     body = [
       "<section class=\"mi-card\">",
-      "<h2>The components</h2>",
+      "<h2>Money Input Components</h2>",
       "<p class=\"mi-desc\">Live HEEx renders of ",
       "<code>Money.Input.Components.number_input/1</code>, ",
       "<code>Money.Input.Components.money_input/1</code>, and ",
-      "<code>Money.Input.Components.currency_picker/1</code>. With ",
-      "AutoNumeric loaded the inputs format as you type and ",
-      "preserve cursor position; the picker is fully interactive ",
-      "(search, recents in <code>localStorage</code>, keyboard ",
-      "nav). The visualizer mounts the same hooks the components ",
-      "expose to LiveView consumers.</p>",
+      "<code>Money.Input.Components.currency_picker/1</code>.</p>",
       "<form method=\"get\" action=\"",
       Render.escape(base),
       "/input\" class=\"mi-form\">",
       ~s(<input type="hidden" name="submitted" value="1">),
       Render.field(
         "Locale",
-        Render.locale_select("locale", locale, reactive: true)
+        Render.locale_select("locale", locale,
+          reactive: true,
+          always_include: [params.deployment_default_locale]
+        )
       ),
       Render.field(
         "Default currency",
@@ -407,9 +405,9 @@ defmodule Money.Input.Visualizer.InputView do
   # demonstrate the components in a non-Phoenix dev page.
   defp bootstrap_script(base) do
     [
-      "<link rel=\"stylesheet\" href=\"",
-      Render.escape(base),
-      "/assets/money_input.css\">",
+      # The component CSS link lives in `Render.page` (in
+      # `<head>`, before the visualizer's stylesheet) so the
+      # cascade lets the theme win. We only need scripts here.
       "<script src=\"https://cdn.jsdelivr.net/npm/autonumeric@4.10.0/dist/autoNumeric.min.js\"></script>",
       "<script type=\"module\">",
       "import Hooks from \"",
@@ -429,10 +427,31 @@ defmodule Money.Input.Visualizer.InputView do
       # checkbox, or preferred currencies submits the form right
       # away so the page re-renders with the new state. Each
       # control opts in by carrying `data-mi-reactive`.
+      #
+      # Special-case the locale change: drop the default-currency
+      # field from the submission so the URL doesn't carry the
+      # old `default_currency=…`. With that param absent the
+      # server re-derives the currency from the new locale
+      # (en-AU → AUD, ja-JP → JPY, …). Same trick for the
+      # picker-on toggle, where the previously-selected currency
+      # could otherwise stick around stale.
       "document.querySelectorAll('[data-mi-reactive]').forEach(el => {\n",
       "  el.addEventListener('change', () => {\n",
       "    const form = el.closest('form');\n",
-      "    if (form) form.submit();\n",
+      "    if (!form) return;\n",
+      "    if (el.name === 'locale') {\n",
+      # Drop the top-level default-currency select so the server
+      # re-derives it from the new locale.
+      "      const cur = form.querySelector('[name=\"default_currency\"]');\n",
+      "      if (cur) cur.disabled = true;\n",
+      # Drop every currency-picker hidden input too. Otherwise the
+      # picker's previous selection (e.g. AUD picked while locale
+      # was en-AU) sticks around when the user switches the locale
+      # to de — the picker would render AUD even though we want it
+      # to follow EUR (de's natural currency).
+      "      form.querySelectorAll('[data-currency-picker-value]').forEach(h => h.disabled = true);\n",
+      "    }\n",
+      "    form.submit();\n",
       "  });\n",
       "});\n",
       # Enter inside the preferred-currencies text input would
