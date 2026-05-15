@@ -1,0 +1,46 @@
+## English source catalog.
+##
+## Intentionally empty: msgstrs fall back to msgids, which ARE
+## the English text. The file exists so `Gettext.known_locales/1`
+## returns "en" alongside the translated locales — without it,
+## `Localize.LanguageTag.best_match("en", [<known>])` falls
+## through to the first non-English entry, causing every
+## "en" request to render in some other locale.
+msgid ""
+msgstr ""
+"Language: en\n"
+
+#: lib/money/input/components.ex:501
+#, elixir-autogen, icu-format
+msgid "All currencies"
+msgstr ""
+
+#: lib/money/input/components.ex:308
+#, elixir-autogen, icu-format
+msgid "Choose currency"
+msgstr ""
+
+#: lib/money/input/components.ex:323
+#, elixir-autogen, icu-format
+msgid "Close currency picker"
+msgstr ""
+
+#: lib/money/input/components.ex:317
+#, elixir-autogen, icu-format
+msgid "Filter currencies"
+msgstr ""
+
+#: lib/money/input/components.ex:351
+#, elixir-autogen, icu-format
+msgid "No matches"
+msgstr ""
+
+#: lib/money/input/components.ex:500
+#, elixir-autogen, icu-format
+msgid "Preferred"
+msgstr ""
+
+#: lib/money/input/components.ex:316
+#, elixir-autogen, icu-format
+msgid "Search code, name, country, symbol…"
+msgstr ""

@@ -1,0 +1,46 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: sv\n"
+
+#: lib/money/input/components.ex:501
+#, elixir-autogen, icu-format
+msgid "All currencies"
+msgstr "Alla valutor"
+
+#: lib/money/input/components.ex:308
+#, elixir-autogen, icu-format
+msgid "Choose currency"
+msgstr "Välj valuta"
+
+#: lib/money/input/components.ex:323
+#, elixir-autogen, icu-format
+msgid "Close currency picker"
+msgstr "Stäng valutaväljare"
+
+#: lib/money/input/components.ex:317
+#, elixir-autogen, icu-format
+msgid "Filter currencies"
+msgstr "Filtrera valutor"
+
+#: lib/money/input/components.ex:351
+#, elixir-autogen, icu-format
+msgid "No matches"
+msgstr "Inga träffar"
+
+#: lib/money/input/components.ex:500
+#, elixir-autogen, icu-format
+msgid "Preferred"
+msgstr "Föredragna"
+
+#: lib/money/input/components.ex:316
+#, elixir-autogen, icu-format
+msgid "Search code, name, country, symbol…"
+msgstr "Sök kod, namn, land, symbol…"
