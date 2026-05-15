@@ -64,6 +64,7 @@ defmodule Money.Input.Visualizer.Render do
       footer(),
       "</main>",
       theme_toggle_script(),
+      clipboard_script(),
       "</body></html>"
     ]
   end
@@ -197,6 +198,49 @@ defmodule Money.Input.Visualizer.Render do
           apply(btn.getAttribute('data-theme-choice'));
         });
       })();
+    </script>
+    """
+  end
+
+  # Click-delegated clipboard handler. Any button with
+  # `data-mi-copy-target="#selector"` copies that element's text
+  # content. Flips `data-copied="true"` on the button for ~1.4s so
+  # the CSS can swap the clipboard icon for a checkmark, then
+  # clears it. No external lib — uses navigator.clipboard.writeText.
+  defp clipboard_script do
+    """
+    <script>
+    (function () {
+      document.addEventListener("click", function (event) {
+        var button = event.target.closest("[data-mi-copy-target]");
+        if (!button) return;
+        var selector = button.getAttribute("data-mi-copy-target");
+        var target = selector && document.querySelector(selector);
+        if (!target) return;
+        var text = target.innerText || target.textContent || "";
+        var done = function () {
+          button.setAttribute("data-copied", "true");
+          setTimeout(function () {
+            button.removeAttribute("data-copied");
+          }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () {
+            /* permission denied or insecure context — swallow */
+          });
+        } else {
+          // Older-browser fallback via a transient textarea.
+          var area = document.createElement("textarea");
+          area.value = text;
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          try { document.execCommand("copy"); done(); } catch (e) {}
+          document.body.removeChild(area);
+        }
+      });
+    })();
     </script>
     """
   end

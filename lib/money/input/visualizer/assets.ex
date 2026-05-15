@@ -417,6 +417,47 @@ defmodule Money.Input.Visualizer.Assets do
     overflow-x: auto;
   }
 
+  /* Copy-to-clipboard icon button — sits in the top-right of a
+     code panel. The wrapping `.mi-code-wrap` provides the
+     positioning context so the button anchors to the <pre>
+     itself (not the surrounding card). */
+  .mi-code-wrap { position: relative; }
+
+  .mi-copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--mi-border);
+    background: var(--mi-surface);
+    color: var(--mi-text-dim);
+    border-radius: var(--mi-radius-sm);
+    cursor: pointer;
+    padding: 0;
+    transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  }
+  .mi-copy-btn:hover { color: var(--mi-text); background: var(--mi-surface-2); }
+  .mi-copy-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .mi-copy-btn .mi-copy-icon-check { display: none; }
+  .mi-copy-btn[data-copied="true"] {
+    color: var(--mi-accent);
+    border-color: var(--mi-accent);
+  }
+  .mi-copy-btn[data-copied="true"] .mi-copy-icon-clipboard { display: none; }
+  .mi-copy-btn[data-copied="true"] .mi-copy-icon-check { display: inline; }
+
   code, .mi-code-inline {
     font-family: var(--mi-mono);
     background: var(--mi-surface-2);

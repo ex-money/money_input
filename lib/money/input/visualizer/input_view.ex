@@ -212,10 +212,39 @@ defmodule Money.Input.Visualizer.InputView do
       "<p class=\"mi-desc\">The HEEx call site that renders the money_input above. ",
       "Tweak the form controls and the code refreshes — copy straight into a ",
       "LiveView template.</p>",
-      "<pre class=\"mi-code\">",
+      "<div class=\"mi-code-wrap\">",
+      "<pre class=\"mi-code\" id=\"money-input-heex\">",
       Render.escape(money_code),
       "</pre>",
+      copy_button("#money-input-heex", "Copy HEEx call to clipboard"),
+      "</div>",
       "</section>"
+    ]
+  end
+
+  # Clipboard-icon button anchored to a `.mi-card`. The card itself
+  # provides the positioning context; the script in render.ex
+  # handles the click via the `data-mi-copy-target` attribute.
+  defp copy_button(target_selector, label) do
+    [
+      "<button type=\"button\" class=\"mi-copy-btn\" ",
+      "data-mi-copy-target=\"",
+      Render.escape(target_selector),
+      "\" aria-label=\"",
+      Render.escape(label),
+      "\" title=\"",
+      Render.escape(label),
+      "\">",
+      # Clipboard icon (visible at rest).
+      "<svg class=\"mi-copy-icon-clipboard\" viewBox=\"0 0 24 24\" aria-hidden=\"true\">",
+      "<rect x=\"9\" y=\"3\" width=\"6\" height=\"3\" rx=\"1\"/>",
+      "<path d=\"M9 4.5H6.5A1.5 1.5 0 0 0 5 6v13.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H15\"/>",
+      "</svg>",
+      # Checkmark icon (shown briefly after a successful copy).
+      "<svg class=\"mi-copy-icon-check\" viewBox=\"0 0 24 24\" aria-hidden=\"true\">",
+      "<polyline points=\"5 12 10 17 19 7\"/>",
+      "</svg>",
+      "</button>"
     ]
   end
 
