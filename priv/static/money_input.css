@@ -1,0 +1,230 @@
+/* MoneyInput baseline styles.
+ *
+ * Imported by consumers via:
+ *
+ *   @import "money_input/priv/static/money_input.css";
+ *
+ * Designed to be minimal — uses neutral CSS variables so the host
+ * app's theme drives the look. Override these to integrate with
+ * Tailwind / DaisyUI / your design system.
+ */
+
+:root {
+  --mi-border: #d4d4d8;
+  --mi-border-focus: #047857;
+  --mi-bg: #ffffff;
+  --mi-bg-muted: #f5f5f4;
+  --mi-fg: #1c1917;
+  --mi-fg-muted: #78716c;
+  --mi-accent: #047857;
+  --mi-accent-fg: #ecfdf5;
+  --mi-row-hover: #f0fdf4;
+  --mi-radius: 0.375rem;
+  --mi-font: inherit;
+}
+
+/* ── Wrapper + input ────────────────────────────────────────── */
+
+.money-input-wrapper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--mi-border);
+  border-radius: var(--mi-radius);
+  background: var(--mi-bg);
+  overflow: hidden;
+  font-family: var(--mi-font);
+  min-width: 12rem;
+}
+
+.money-input-wrapper:focus-within {
+  border-color: var(--mi-border-focus);
+  outline: 2px solid var(--mi-border-focus);
+  outline-offset: -1px;
+}
+
+.money-input-field {
+  flex: 1;
+  border: 0;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  color: var(--mi-fg);
+  background: transparent;
+  min-width: 0;
+}
+.money-input-field:focus { outline: none; }
+
+.money-input-field.text-left   { text-align: left; }
+.money-input-field.text-center { text-align: center; }
+.money-input-field.text-right  { text-align: right; }
+
+.money-input-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  font-weight: 600;
+  background: var(--mi-bg-muted);
+  border-right: 1px solid var(--mi-border);
+  min-width: 2.5rem;
+  transition: background 150ms ease;
+}
+
+.money-input-wrapper > .money-input-symbol:last-child {
+  border-right: 0;
+  border-left: 1px solid var(--mi-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money-input-symbol { transition: none; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Currency picker ─────────────────────────────────────────── */
+
+.currency-picker { position: relative; display: inline-block; }
+
+.currency-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  padding: 0 0.75rem;
+  height: 100%;
+  background: var(--mi-bg-muted);
+  color: var(--mi-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.currency-picker-trigger:hover { background: var(--mi-row-hover); }
+.currency-picker-trigger:focus-visible {
+  outline: 2px solid var(--mi-accent);
+  outline-offset: -2px;
+}
+
+.currency-picker-flag { font-size: 1.1em; line-height: 1; }
+.currency-picker-caret { font-size: 0.75em; color: var(--mi-fg-muted); }
+
+.currency-picker-overlay {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 20;
+  width: 22rem;
+  max-width: 90vw;
+  max-height: 24rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--mi-bg);
+  border: 1px solid var(--mi-border);
+  border-radius: var(--mi-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.currency-picker-search-row {
+  display: flex;
+  padding: 0.5rem;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--mi-border);
+}
+.currency-picker-search {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  border: 1px solid var(--mi-border);
+  border-radius: var(--mi-radius);
+}
+.currency-picker-search:focus {
+  outline: 2px solid var(--mi-accent);
+  outline-offset: -1px;
+  border-color: var(--mi-accent);
+}
+.currency-picker-close {
+  border: 0;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--mi-fg-muted);
+  padding: 0 0.5rem;
+}
+.currency-picker-close:hover { color: var(--mi-fg); }
+
+.currency-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.currency-picker-section {
+  padding: 0.5rem 0.75rem 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mi-fg-muted);
+}
+
+.currency-picker-row {
+  display: grid;
+  grid-template-columns: 1.5rem 3rem 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+.currency-picker-row:hover { background: var(--mi-row-hover); }
+.currency-picker-row[aria-selected="true"] {
+  background: var(--mi-accent);
+  color: var(--mi-accent-fg);
+}
+.currency-picker-row:focus {
+  outline: 2px solid var(--mi-accent);
+  outline-offset: -2px;
+}
+.currency-picker-row-code  { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.currency-picker-row-name  { color: inherit; }
+.currency-picker-row-symbol { color: var(--mi-fg-muted); }
+
+.currency-picker-empty {
+  padding: 1rem 0.75rem;
+  text-align: center;
+  color: var(--mi-fg-muted);
+  font-style: italic;
+}
+
+/* Mobile full-screen sheet variant */
+.currency-picker.is-sheet .currency-picker-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  z-index: 100;
+  animation: mi-sheet-slide-in 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .currency-picker.is-sheet .currency-picker-overlay {
+    animation: none;
+  }
+}
+@keyframes mi-sheet-slide-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.currency-picker.is-sheet .currency-picker-row { padding: 0.85rem 1rem; }
