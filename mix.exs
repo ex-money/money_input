@@ -66,7 +66,8 @@ defmodule MoneyInput.MixProject do
         "README.md",
         "CHANGELOG.md",
         "LICENSE.md",
-        "guides/integration.md"
+        "guides/integration.md",
+        "guides/styling.md"
       ],
       groups_for_extras: [
         Guides: ~r/guides\/.*/

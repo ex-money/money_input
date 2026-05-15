@@ -4,7 +4,7 @@ Locale-aware money form input — `<.money_input>` and `<.currency_picker>` Phoe
 
 For a plain *number* input (no currency), see the sibling [`localize_inputs`](https://hex.pm/packages/localize_inputs) package — `<.number_input>` lives there.
 
-For a full end-to-end Phoenix integration walkthrough — Elixir deps, JS deps, asset wiring, schema, LiveView — read  [`guides/integration.md`](https://github.com/ex-money/money_input/blob/main/guides/integration.md).
+For a full end-to-end Phoenix integration walkthrough — Elixir deps, JS deps, asset wiring, schema, LiveView — read the [integration guide](https://hexdocs.pm/ex_money_input/integration.html).
 
 ## Installation
 
