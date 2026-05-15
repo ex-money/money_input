@@ -2,11 +2,12 @@ defmodule Money.Input.Visualizer.FormatView do
   @moduledoc false
 
   # Cross-locale format table. Take one parsed value and show how
-  # Money.Input.Formatter renders it in every demo locale. Shows
-  # decimal-separator inversion, symbol-position swap, native digit
-  # systems (Arabic-Indic, Persian).
+  # `Localize.Number.to_string/2` (for `:number` mode) and
+  # `Money.to_string/2` (for `:money` mode) render it in every
+  # demo locale. Shows decimal-separator inversion,
+  # symbol-position swap, native digit systems
+  # (Arabic-Indic, Persian).
 
-  alias Money.Input.Formatter
   alias Money.Input.Visualizer.Render
 
   def render(params, base) do
@@ -20,7 +21,7 @@ defmodule Money.Input.Visualizer.FormatView do
           :number ->
             decimal = parse_decimal(amount)
 
-            {locale, label, decimal && Formatter.format_number(decimal, locale: locale)}
+            {locale, label, decimal && Localize.Number.to_string!(decimal, locale: locale)}
 
           :money ->
             money =
@@ -31,7 +32,7 @@ defmodule Money.Input.Visualizer.FormatView do
                 _ -> nil
               end
 
-            {locale, label, money && Formatter.format_money(money, locale: locale)}
+            {locale, label, money && Money.to_string!(money, locale: locale)}
         end
       end
 

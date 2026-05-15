@@ -2,33 +2,32 @@ defmodule Money.Input.Visualizer.InputView do
   @moduledoc false
 
   # Live demo of the actual Money.Input.Components. Renders the
-  # number_input, money_input, and currency_picker components
-  # server-side, then bootstraps AutoNumeric and our picker JS
-  # on the rendered DOM so they behave live in the browser.
+  # money_input and currency_picker components server-side, then
+  # bootstraps AutoNumeric and our picker JS on the rendered DOM
+  # so they behave live in the browser.
 
-  alias Money.Input.{Cast, Formatter, Locale, Parser, Validator}
+  alias Money.Input.{Cast, Currency, Validator}
   alias Money.Input.Components
   alias Money.Input.Visualizer.Render
 
   def render(params, base) do
     locale = params.locale
     default_currency = params.default_currency
-    number_input = params.number_input
     money_input = params.money_input
     picker = params.picker
     preferred = params.preferred_currencies
 
-    number_result = parse_number_result(number_input, locale)
     money_result = parse_money_result(money_input, locale, default_currency)
-    {:ok, locale_data} = Locale.resolve(locale, currency: default_currency)
+    {:ok, locale_data} = Currency.currency_for_locale(locale, currency: default_currency)
 
     body = [
       "<section class=\"mi-card\">",
       "<h2>Money Input Components</h2>",
       "<p class=\"mi-desc\">Live HEEx renders of ",
-      "<code>Money.Input.Components.number_input/1</code>, ",
-      "<code>Money.Input.Components.money_input/1</code>, and ",
-      "<code>Money.Input.Components.currency_picker/1</code>.</p>",
+      "<code>Money.Input.Components.money_input/1</code> and ",
+      "<code>Money.Input.Components.currency_picker/1</code>. For a ",
+      "plain number input (no currency), see the sibling ",
+      "<code>localize_inputs</code> package.</p>",
       "<form method=\"get\" action=\"",
       Render.escape(base),
       "/input\" class=\"mi-form\">",
@@ -48,7 +47,6 @@ defmodule Money.Input.Visualizer.InputView do
       ),
       picker_toggle(picker),
       preferred_currencies_field(preferred),
-      live_number_input_field(locale, locale_data, number_input),
       live_money_input_field(
         locale,
         default_currency,
@@ -65,7 +63,6 @@ defmodule Money.Input.Visualizer.InputView do
       "</div>",
       "</form>",
       "</section>",
-      result_card("number_input result", number_result),
       result_card("money_input result", money_result),
       code_card(locale, default_currency, picker, preferred),
       locale_card(locale_data),
@@ -78,40 +75,6 @@ defmodule Money.Input.Visualizer.InputView do
       base: base,
       body: body
     )
-  end
-
-  defp live_number_input_field(locale, _locale_data, value) do
-    form = make_form("number_input", value)
-
-    assigns = %{
-      form: form,
-      field: :number_input,
-      locale: locale,
-      __changed__: nil,
-      class: nil,
-      input_class: nil,
-      align: :left,
-      integer: false,
-      min: nil,
-      max: nil,
-      decimals: nil,
-      placeholder: nil,
-      js: true,
-      value: nil,
-      rest: %{}
-    }
-
-    rendered = Components.number_input(assigns)
-
-    [
-      "<div class=\"mi-field mi-field-wide\">",
-      "<label>",
-      "<span>Number input</span>",
-      Phoenix.HTML.Safe.to_iodata(rendered),
-      "</label>",
-      "<small class=\"mi-hint\">phx-hook=\"NumberInput\" — wraps AutoNumeric when present</small>",
-      "</div>"
-    ]
   end
 
   defp live_money_input_field(locale, default_currency, _locale_data, value, picker, preferred) do
@@ -202,17 +165,14 @@ defmodule Money.Input.Visualizer.InputView do
     ]
   end
 
-  defp make_form(field, value, extra \\ %{}) do
+  defp make_form(field, value, extra) do
     # `as: nil` keeps field names flat (e.g. `currency` rather
     # than `demo[currency]`), so the picker's hidden input round-
     # trips through the visualizer's URL params (which are also
     # flat) when the form is submitted.
-    params = Map.merge(extra, %{Atom.to_string(field |> ensure_atom()) => value || ""})
+    params = Map.merge(extra, %{to_string(field) => value || ""})
     Phoenix.HTML.FormData.to_form(params, as: nil)
   end
-
-  defp ensure_atom(atom) when is_atom(atom), do: atom
-  defp ensure_atom(string) when is_binary(string), do: String.to_atom(string)
 
   defp result_card(_title, nil), do: ""
 
@@ -244,32 +204,19 @@ defmodule Money.Input.Visualizer.InputView do
   end
 
   defp code_card(locale, default_currency, picker, preferred) do
-    number_code = build_number_call(locale)
     money_code = build_money_call(locale, default_currency, picker, preferred)
 
     [
       "<section class=\"mi-card\">",
       "<h2>Component code</h2>",
-      "<p class=\"mi-desc\">The HEEx call sites that render the inputs above. ",
+      "<p class=\"mi-desc\">The HEEx call site that renders the money_input above. ",
       "Tweak the form controls and the code refreshes — copy straight into a ",
       "LiveView template.</p>",
       "<pre class=\"mi-code\">",
-      Render.escape(number_code),
-      "\n\n",
       Render.escape(money_code),
       "</pre>",
       "</section>"
     ]
-  end
-
-  defp build_number_call(locale) do
-    """
-    <.number_input
-      form={@form}
-      field={:quantity}
-      locale=#{format_locale_attr(locale)}
-    />\
-    """
   end
 
   defp build_money_call(locale, default_currency, picker, preferred) do
@@ -309,40 +256,11 @@ defmodule Money.Input.Visualizer.InputView do
     [
       "<section class=\"mi-card\">",
       "<h2>Resolved locale data</h2>",
-      "<p class=\"mi-desc\">What <code>Money.Input.Locale.resolve/2</code> ",
+      "<p class=\"mi-desc\">What <code>Money.Input.Currency.currency_for_locale/2</code> ",
       "returns for the current locale + currency combination — the ",
       "data the JS hook reads from <code>data-</code> attributes.</p>",
       Render.code(locale_data)
     ]
-  end
-
-  defp parse_number_result(nil, _locale), do: nil
-  defp parse_number_result("", _locale), do: nil
-
-  defp parse_number_result(value, locale) do
-    case Parser.parse_number(value, locale: locale) do
-      {:ok, nil} ->
-        nil
-
-      {:ok, parsed} ->
-        canonical = Parser.to_canonical(parsed)
-        formatted = Formatter.format_number(parsed, locale: locale)
-        validation = Validator.validate_number(parsed)
-
-        [
-          {"Input", value, nil},
-          {"Parsed (Decimal)", inspect(parsed), nil},
-          {"Canonical wire value", canonical, nil},
-          {"Blur format (#{locale})", formatted, nil},
-          {"Validation", inspect(validation), validation_css(validation)}
-        ]
-
-      {:error, reason} ->
-        [
-          {"Input", value, nil},
-          {"Error", inspect(reason), "mi-bad"}
-        ]
-    end
   end
 
   defp parse_money_result(nil, _locale, _currency), do: nil
@@ -354,7 +272,7 @@ defmodule Money.Input.Visualizer.InputView do
   # with `Money.Input.Cast.cast/2` — the same code path
   # `Money.Ecto.Composite.Type.cast/1` and
   # `Money.Input.Changeset.cast_money/3` use. (Note: parsing is
-  # for *strings* and lives in `Money.Input.Parser`. Casting is
+  # for *strings* and lives in `Money.parse/2`. Casting is
   # for structured form submissions — different operation.)
   defp parse_money_result(value, locale, currency) do
     case Cast.cast(value, locale: locale, currency: currency) do
@@ -362,15 +280,15 @@ defmodule Money.Input.Visualizer.InputView do
         nil
 
       {:ok, %Money{} = money} ->
-        canonical = Parser.to_canonical(money)
-        formatted = Formatter.format_money(money, locale: locale)
-        symbol_off = Formatter.format_money(money, locale: locale, no_symbol: true)
+        canonical = Decimal.to_string(money.amount, :normal)
+        formatted = Money.to_string!(money, locale: locale)
+        symbol_off = Money.to_string!(money, locale: locale, currency_symbol: :none)
         validation = Validator.validate_money(money)
 
         [
           {"Submitted params", describe_money_submission(value), nil},
           {"Cast to Money", Money.to_string!(money) <> "  (" <> inspect(money) <> ")", nil},
-          {"Canonical wire value", canonical, nil},
+          {"Stored amount (canonical)", canonical, nil},
           {"Blur format (#{locale})", formatted, nil},
           {"Number portion only", symbol_off, nil},
           {"Validation", inspect(validation), validation_css(validation)}
@@ -420,7 +338,6 @@ defmodule Money.Input.Visualizer.InputView do
       "    instance.mounted();\n",
       "  });\n",
       "}\n",
-      "mount('[phx-hook=\"NumberInput\"]', Hooks.NumberInput);\n",
       "mount('[phx-hook=\"MoneyInput\"]', Hooks.MoneyInput);\n",
       "mount('[phx-hook=\"CurrencyPicker\"]', Hooks.CurrencyPicker);\n",
       # Reactive form: changing locale, default currency, picker

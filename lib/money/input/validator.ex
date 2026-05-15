@@ -1,99 +1,79 @@
 defmodule Money.Input.Validator do
   @moduledoc """
-  Server-side validation for parsed number and money input values.
+  Business-rule validation for `Money.t/0` values.
 
-  The validator is intentionally currency-aware: USD allows two
-  fractional digits, JPY allows zero, BHD allows three. Submitting
-  a value with more decimals than the currency permits is
-  rejected.
+  ## Why this is separate from `Money.Input.Cast`
 
-  """
+  `Money.Input.Cast.cast/2` answers the question *"can I turn
+  this user input into a Money?"* — shape and parse validation
+  only. It rejects missing currencies and unparseable amounts.
 
-  @typedoc "An error produced by the validator."
-  @type error :: {atom(), String.t()}
+  This module answers the question *"is this Money acceptable
+  under my business rules?"* — bounds (`:min`/`:max`),
+  required-ness, an enforced currency, and currency-aware
+  fractional-digit precision (USD ≤ 2, JPY ≤ 0, BHD ≤ 3).
+  `Money.new(:JPY, "1.5")` is shape-valid but business-invalid
+  for most apps.
 
-  @doc """
-  Validates a parsed number.
-
-  ### Arguments
-
-  * `value` is a `Decimal`, integer, or `nil`.
-
-  * `options` is a keyword list.
-
-  ### Options
-
-  * `:required` — when `true`, `nil` is rejected.
-
-  * `:min` / `:max` — numeric bounds (any value the parser
-    accepts).
-
-  * `:decimals` — maximum number of fractional digits.
-
-  ### Returns
-
-  * `:ok` on success, or `{:error, [error()]}`.
-
-  ### Examples
-
-      iex> Money.Input.Validator.validate_number(Decimal.new("5"), min: 1, max: 10)
-      :ok
-
-      iex> Money.Input.Validator.validate_number(Decimal.new("15"), max: 10)
-      {:error, [{:max, "must be at most 10"}]}
-
-      iex> Money.Input.Validator.validate_number(nil, required: true)
-      {:error, [{:required, "is required"}]}
+  Both pieces are usually wired through the `Ecto.Changeset`
+  helpers in `Money.Input.Changeset` — `cast_money/3` then
+  `validate_money/3`.
 
   """
-  @spec validate_number(term(), Keyword.t()) :: :ok | {:error, [error()]}
-  def validate_number(value, options \\ []) do
-    errors =
-      []
-      |> check_required(value, options)
-      |> check_range(value, options)
-      |> check_decimals(value, options)
-      |> Enum.reverse()
 
-    if errors == [], do: :ok, else: {:error, errors}
-  end
+  alias Money.Input.ValidationError
 
   @doc """
-  Validates a parsed money value.
+  Validates a `Money.t/0` against bounds, precision, and
+  required-ness.
 
   ### Arguments
 
   * `value` is a `Money.t/0` or `nil`.
 
-  * `options` is a keyword list.
+  * `options` is a keyword list of options.
 
   ### Options
 
   * `:required` — when `true`, `nil` is rejected.
 
-  * `:min` / `:max` — `Money.t/0` (or a value the parser
-    accepts).
+  * `:min` — minimum allowed value. A `Money.t/0`, or any value
+    `Money.new/2` accepts (e.g. a `Decimal` or string) — when
+    the latter, the bound takes the value's currency.
+
+  * `:max` — maximum allowed value. Same shape options as
+    `:min`.
 
   * `:currency` — when set, enforces that the value's currency
     matches.
 
   ### Returns
 
-  * `:ok` or `{:error, [error()]}`.
+  * `:ok` when every check passes.
+
+  * `{:error, %Money.Input.ValidationError{errors: [{atom(),
+    String.t()}]}}` with one entry per failing check, in the
+    order `:required`, `:currency`, `:decimals`, `:min`, `:max`.
+    `Money.Input.Changeset.validate_money/3` unpacks the entries
+    into per-field changeset errors.
 
   ### Examples
 
       iex> Money.Input.Validator.validate_money(Money.new(:USD, "1234.56"), max: Money.new(:USD, "10000"))
       :ok
 
-      iex> Money.Input.Validator.validate_money(Money.new(:USD, "1.234"), max: Money.new(:USD, "10000"))
-      {:error, [{:decimals, "must have at most 2 fractional digits"}]}
+      iex> {:error, %Money.Input.ValidationError{errors: errors}} =
+      ...>   Money.Input.Validator.validate_money(Money.new(:USD, "1.234"), max: Money.new(:USD, "10000"))
+      iex> errors
+      [{:decimals, "must have at most 2 fractional digits"}]
 
-      iex> Money.Input.Validator.validate_money(Money.new(:USD, 1), currency: :EUR)
-      {:error, [{:currency, "must be EUR"}]}
+      iex> {:error, %Money.Input.ValidationError{errors: errors}} =
+      ...>   Money.Input.Validator.validate_money(Money.new(:USD, 1), currency: :EUR)
+      iex> errors
+      [{:currency, "must be EUR"}]
 
   """
-  @spec validate_money(term(), Keyword.t()) :: :ok | {:error, [error()]}
+  @spec validate_money(term(), Keyword.t()) :: :ok | {:error, ValidationError.t()}
   def validate_money(value, options \\ []) do
     errors =
       []
@@ -101,9 +81,9 @@ defmodule Money.Input.Validator do
       |> check_currency(value, options)
       |> check_money_precision(value)
       |> check_money_range(value, options)
+      |> Enum.reverse()
 
-    errors = Enum.reverse(errors)
-    if errors == [], do: :ok, else: {:error, errors}
+    if errors == [], do: :ok, else: {:error, ValidationError.exception(errors: errors)}
   end
 
   defp check_required(errors, nil, options) do
@@ -115,50 +95,6 @@ defmodule Money.Input.Validator do
   end
 
   defp check_required(errors, _value, _options), do: errors
-
-  defp check_range(errors, nil, _options), do: errors
-
-  defp check_range(errors, value, options) do
-    errors
-    |> maybe_check_min(value, Keyword.get(options, :min))
-    |> maybe_check_max(value, Keyword.get(options, :max))
-  end
-
-  defp maybe_check_min(errors, _value, nil), do: errors
-
-  defp maybe_check_min(errors, value, min) do
-    if compare(value, min) == :lt do
-      [{:min, "must be at least #{describe(min)}"} | errors]
-    else
-      errors
-    end
-  end
-
-  defp maybe_check_max(errors, _value, nil), do: errors
-
-  defp maybe_check_max(errors, value, max) do
-    if compare(value, max) == :gt do
-      [{:max, "must be at most #{describe(max)}"} | errors]
-    else
-      errors
-    end
-  end
-
-  defp check_decimals(errors, nil, _options), do: errors
-
-  defp check_decimals(errors, value, options) do
-    case Keyword.get(options, :decimals) do
-      nil ->
-        errors
-
-      max_decimals ->
-        if decimal_places(value) > max_decimals do
-          [{:decimals, "must have at most #{max_decimals} fractional digits"} | errors]
-        else
-          errors
-        end
-    end
-  end
 
   defp check_currency(errors, %Money{currency: code}, options) do
     case Keyword.get(options, :currency) do
@@ -194,57 +130,32 @@ defmodule Money.Input.Validator do
     |> maybe_check_max(value, normalize_money_bound(Keyword.get(options, :max), value))
   end
 
+  defp maybe_check_min(errors, _value, nil), do: errors
+
+  defp maybe_check_min(errors, value, min) do
+    case Money.cmp(value, min) do
+      -1 -> [{:min, "must be at least #{Money.to_string!(min)}"} | errors]
+      _ -> errors
+    end
+  end
+
+  defp maybe_check_max(errors, _value, nil), do: errors
+
+  defp maybe_check_max(errors, value, max) do
+    case Money.cmp(value, max) do
+      1 -> [{:max, "must be at most #{Money.to_string!(max)}"} | errors]
+      _ -> errors
+    end
+  end
+
   defp normalize_money_bound(nil, _value), do: nil
   defp normalize_money_bound(%Money{} = bound, _value), do: bound
 
   defp normalize_money_bound(bound, %Money{currency: currency}) do
-    Money.new(currency, to_string(bound))
+    Money.new(currency, bound)
   end
-
-  defp compare(%Money{} = a, %Money{} = b) do
-    case Money.cmp(a, b) do
-      {:error, _} -> :eq
-      result -> result
-    end
-  end
-
-  defp compare(%Decimal{} = a, %Decimal{} = b), do: Decimal.compare(a, b)
-  defp compare(%Decimal{} = a, b), do: Decimal.compare(a, to_decimal(b))
-  defp compare(a, %Decimal{} = b), do: Decimal.compare(to_decimal(a), b)
-
-  defp compare(a, b) when is_integer(a) and is_integer(b) do
-    cond do
-      a < b -> :lt
-      a > b -> :gt
-      true -> :eq
-    end
-  end
-
-  defp compare(a, b), do: Decimal.compare(to_decimal(a), to_decimal(b))
-
-  defp to_decimal(value) when is_integer(value), do: Decimal.new(value)
-  defp to_decimal(value) when is_binary(value), do: Decimal.new(value)
-  defp to_decimal(value) when is_float(value), do: Decimal.from_float(value)
-
-  defp describe(value) do
-    case value do
-      %Money{} = money -> Money.to_string!(money)
-      other -> to_string(other)
-    end
-  end
-
-  defp decimal_places(%Money{amount: amount}), do: decimal_places(amount)
 
   defp decimal_places(%Decimal{exp: exp}) when exp < 0, do: -exp
   defp decimal_places(%Decimal{}), do: 0
   defp decimal_places(value) when is_integer(value), do: 0
-
-  defp decimal_places(value) when is_binary(value) do
-    case String.split(value, ".") do
-      [_, fraction] -> String.length(fraction)
-      _ -> 0
-    end
-  end
-
-  defp decimal_places(_), do: 0
 end

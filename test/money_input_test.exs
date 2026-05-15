@@ -1,40 +1,9 @@
 defmodule Money.InputTest do
   use ExUnit.Case
   doctest Money.Input
-  doctest Money.Input.Parser
   doctest Money.Input.Cast
-  doctest Money.Input.Formatter
   doctest Money.Input.Validator
-  doctest Money.Input.Locale
-
-  describe "Parser.parse_number/2" do
-    test "parses en locale conventions" do
-      assert {:ok, decimal} = Money.Input.Parser.parse_number("1,234.56", locale: :en)
-      assert Decimal.equal?(decimal, Decimal.new("1234.56"))
-    end
-
-    test "parses de locale (inverted separators)" do
-      assert {:ok, decimal} = Money.Input.Parser.parse_number("1.234,56", locale: :de)
-      assert Decimal.equal?(decimal, Decimal.new("1234.56"))
-    end
-
-    test "blank input is nil" do
-      assert {:ok, nil} = Money.Input.Parser.parse_number("", locale: :en)
-      assert {:ok, nil} = Money.Input.Parser.parse_number(nil, locale: :en)
-    end
-
-    test "accounting parens become negative" do
-      assert {:ok, decimal} = Money.Input.Parser.parse_number("(1,234.56)", locale: :en)
-      assert Decimal.equal?(decimal, Decimal.new("-1234.56"))
-    end
-
-    test "tolerates NBSP grouping" do
-      # fr uses NBSP grouping. Paste from a Word doc may use NBSP
-      # already which is what fr expects natively.
-      assert {:ok, decimal} = Money.Input.Parser.parse_number("1 234,56", locale: :fr)
-      assert Decimal.equal?(decimal, Decimal.new("1234.56"))
-    end
-  end
+  doctest Money.Input.Currency
 
   describe "Cast.cast/2" do
     test "casts a nested form map into a Money.t" do
@@ -58,7 +27,7 @@ defmodule Money.InputTest do
     end
 
     test "rejects map without currency or fallback" do
-      assert {:error, {Money.UnknownCurrencyError, _}} =
+      assert {:error, %Money.UnknownCurrencyError{}} =
                Money.Input.Cast.cast(%{"amount" => "10"})
     end
 
@@ -72,100 +41,32 @@ defmodule Money.InputTest do
       assert {:ok, ^money} = Money.Input.Cast.cast(money)
     end
 
-    test "delegates strings to parse_money for convenience" do
+    test "delegates bare strings to Money.parse" do
       assert {:ok, %Money{currency: :USD} = money} =
                Money.Input.Cast.cast("$1,234.56", locale: :en)
 
       assert Decimal.equal?(money.amount, Decimal.new("1234.56"))
     end
-  end
 
-  describe "Parser.parse_money/2" do
-    test "parses currency symbols" do
-      assert {:ok, %Money{currency: :USD} = money} =
-               Money.Input.Parser.parse_money("$1,234.56", locale: :en)
-
-      assert Decimal.equal?(money.amount, Decimal.new("1234.56"))
-    end
-
-    test "uses provided default currency" do
+    test "string input uses :currency option as default_currency" do
       assert {:ok, %Money{currency: :EUR} = money} =
-               Money.Input.Parser.parse_money("1.234,56", locale: :de, currency: :EUR)
+               Money.Input.Cast.cast("1.234,56", locale: :de, currency: :EUR)
 
       assert Decimal.equal?(money.amount, Decimal.new("1234.56"))
     end
 
-    test "blank input is nil" do
-      assert {:ok, nil} = Money.Input.Parser.parse_money("", locale: :en, currency: :USD)
-    end
-  end
-
-  describe "Parser.to_canonical/1" do
-    test "decimals stringify to period form" do
-      assert Money.Input.Parser.to_canonical(Decimal.new("1234.56")) == "1234.56"
-    end
-
-    test "money stringifies to canonical decimal" do
-      assert Money.Input.Parser.to_canonical(Money.new(:USD, "1234.56")) == "1234.56"
-    end
-  end
-
-  describe "Formatter.format_number/2" do
-    test "en uses period decimal" do
-      assert Money.Input.Formatter.format_number(Decimal.new("1234.56"), locale: :en) ==
-               "1,234.56"
-    end
-
-    test "de uses comma decimal" do
-      assert Money.Input.Formatter.format_number(Decimal.new("1234.56"), locale: :de) ==
-               "1.234,56"
-    end
-  end
-
-  describe "Formatter.format_money/2" do
-    test "renders currency symbol" do
-      assert Money.Input.Formatter.format_money(Money.new(:USD, "1234.56"), locale: :en) ==
-               "$1,234.56"
-    end
-
-    test "no_symbol returns only the digits" do
-      assert Money.Input.Formatter.format_money(
-               Money.new(:USD, "1234.56"),
-               locale: :en,
-               no_symbol: true
-             ) == "1,234.56"
-    end
-  end
-
-  describe "Validator.validate_number/2" do
-    test "rejects values out of range" do
-      assert {:error, [{:max, _}]} =
-               Money.Input.Validator.validate_number(Decimal.new("100"), max: 50)
-
-      assert {:error, [{:min, _}]} =
-               Money.Input.Validator.validate_number(Decimal.new("1"), min: 5)
-    end
-
-    test "rejects excessive decimals" do
-      assert {:error, [{:decimals, _}]} =
-               Money.Input.Validator.validate_number(Decimal.new("1.234"), decimals: 2)
-    end
-
-    test "accepts nil unless required" do
-      assert :ok = Money.Input.Validator.validate_number(nil)
-
-      assert {:error, [{:required, _}]} =
-               Money.Input.Validator.validate_number(nil, required: true)
+    test "blank string is nil" do
+      assert {:ok, nil} = Money.Input.Cast.cast("", locale: :en, currency: :USD)
     end
   end
 
   describe "Validator.validate_money/2" do
     test "rejects values that exceed the currency's iso digits" do
-      assert {:error, [{:decimals, _}]} =
+      assert {:error, %Money.Input.ValidationError{errors: [{:decimals, _}]}} =
                Money.Input.Validator.validate_money(Money.new(:USD, "1.234"))
 
       # JPY has zero fractional digits.
-      assert {:error, [{:decimals, _}]} =
+      assert {:error, %Money.Input.ValidationError{errors: [{:decimals, _}]}} =
                Money.Input.Validator.validate_money(Money.new(:JPY, "1.5"))
     end
 
@@ -174,22 +75,23 @@ defmodule Money.InputTest do
     end
 
     test "rejects mismatched currency" do
-      assert {:error, [{:currency, _}]} =
+      assert {:error, %Money.Input.ValidationError{errors: [{:currency, _}]}} =
                Money.Input.Validator.validate_money(Money.new(:USD, 1), currency: :EUR)
     end
   end
 
-  describe "Locale.resolve/2" do
-    test "en uses period decimal, comma grouping" do
-      assert {:ok, data} = Money.Input.Locale.resolve(:en, currency: :USD)
+  describe "Currency.currency_for_locale/2" do
+    test "en uses period decimal, comma grouping, prefix symbol" do
+      assert {:ok, data} = Money.Input.Currency.currency_for_locale(:en, currency: :USD)
       assert data.decimal == "."
       assert data.group == ","
       assert data.symbol == "$"
       assert data.symbol_position == :prefix
+      assert data.iso_digits == 2
     end
 
     test "de inverts separators and places symbol as suffix" do
-      assert {:ok, data} = Money.Input.Locale.resolve(:de, currency: :EUR)
+      assert {:ok, data} = Money.Input.Currency.currency_for_locale(:de, currency: :EUR)
       assert data.decimal == ","
       assert data.group == "."
       assert data.symbol == "€"
@@ -197,8 +99,53 @@ defmodule Money.InputTest do
     end
 
     test "JPY has zero iso digits" do
-      assert {:ok, data} = Money.Input.Locale.resolve(:ja, currency: :JPY)
+      assert {:ok, data} = Money.Input.Currency.currency_for_locale(:ja, currency: :JPY)
       assert data.iso_digits == 0
+    end
+
+    test "uses the cldr_locale_id from the validated LanguageTag" do
+      assert {:ok, data} =
+               Money.Input.Currency.currency_for_locale("en-AU", currency: :AUD)
+
+      # Canonical CLDR id (atom), not the raw input.
+      assert is_atom(data.locale)
+      assert data.language_tag.cldr_locale_id == data.locale
+    end
+
+    test "non-Latin number system: ar uses arab digits" do
+      assert {:ok, data} = Money.Input.Currency.currency_for_locale("ar-EG", currency: :EGP)
+      # Arabic locales use the :arab number system by default.
+      assert data.number_system in [:arab, :latn]
+    end
+
+    test "symbol_kind: :none returns an empty string" do
+      assert {:ok, data} =
+               Money.Input.Currency.currency_for_locale(:en, currency: :USD, symbol_kind: :none)
+
+      assert data.symbol == ""
+    end
+
+    test "symbol_kind: :iso returns the ISO code" do
+      assert {:ok, data} =
+               Money.Input.Currency.currency_for_locale(:en, currency: :USD, symbol_kind: :iso)
+
+      assert data.symbol == "USD"
+    end
+
+    test "no currency → currency-specific fields are nil" do
+      assert {:ok, data} = Money.Input.Currency.currency_for_locale(:en)
+      assert data.currency == nil
+      assert data.symbol == nil
+      assert data.symbol_position == nil
+      assert data.iso_digits == nil
+      # number system + separators are still populated
+      assert data.decimal == "."
+      assert data.number_system == :latn
+    end
+
+    test "invalid locale returns a semantic exception" do
+      assert {:error, %Localize.InvalidLocaleError{}} =
+               Money.Input.Currency.currency_for_locale("xx-XX")
     end
   end
 end

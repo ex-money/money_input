@@ -210,10 +210,9 @@ defmodule Money.Input.Visualizer.Render do
   defp footer do
     [
       "<footer class=\"mi-footer\">",
-      "<p>Headless API: <code>Money.Input.Parser</code>, ",
-      "<code>Money.Input.Formatter</code>, ",
+      "<p>Headless API: <code>Money.Input.Cast</code>, ",
       "<code>Money.Input.Validator</code>, ",
-      "<code>Money.Input.Locale</code>.</p>",
+      "<code>Money.Input.Currency</code>.</p>",
       "</footer>"
     ]
   end

@@ -3,64 +3,36 @@ if Code.ensure_loaded?(Ecto.Changeset) do
     @moduledoc """
     Ecto.Changeset helpers for `Money.Input`.
 
-    Only compiled when `:ecto` is loaded. Wraps
-    `Money.Input.Validator` so the validation rules used at the
-    form layer (range, precision, required, currency match) are
-    the same ones applied at the changeset layer.
+    Only compiled when `:ecto` is loaded. Two functions, applied
+    in order:
+
+    * `cast_money/3` — converts a `%{"amount" => ..., "currency"
+      => ...}` form submission into a `Money.t/0` change. Wraps
+      `Money.Input.Cast.cast/2`.
+
+    * `validate_money/3` — applies business rules (bounds,
+      precision, currency match) to the cast value. Wraps
+      `Money.Input.Validator.validate_money/2`.
+
+    Plain-number fields (`:integer`, `:decimal`) are validated
+    by the sibling `Localize.Inputs.Changeset.validate_number/3`.
 
         schema "products" do
           field :price, Money.Ecto.Composite.Type
-          field :quantity, :decimal
         end
 
         def changeset(product, attrs) do
           product
-          |> Ecto.Changeset.cast(attrs, [:price, :quantity])
+          |> Ecto.Changeset.cast(attrs, [:price])
           |> Money.Input.Changeset.validate_money(:price,
                min: Money.new(:USD, "0.01"),
                max: Money.new(:USD, 9999))
-          |> Money.Input.Changeset.validate_number(:quantity, min: 1)
         end
 
     """
 
     alias Ecto.Changeset
     alias Money.Input.Validator
-
-    @doc """
-    Validates a `Decimal` / integer field with the rules from
-    `Money.Input.Validator.validate_number/2`.
-
-    ### Arguments
-
-    * `changeset` is an `Ecto.Changeset`.
-
-    * `field` is the field name.
-
-    * `options` is a keyword list forwarded to the validator
-      (`:min`, `:max`, `:decimals`, `:required`).
-
-    ### Returns
-
-    * The changeset, with any errors added.
-
-    ### Examples
-
-        iex> changeset = Ecto.Changeset.cast({%{}, %{quantity: :integer}}, %{"quantity" => 5}, [:quantity])
-        iex> changeset = Money.Input.Changeset.validate_number(changeset, :quantity, min: 1, max: 10)
-        iex> changeset.valid?
-        true
-
-    """
-    @spec validate_number(Ecto.Changeset.t(), atom(), Keyword.t()) :: Ecto.Changeset.t()
-    def validate_number(%Changeset{} = changeset, field, options \\ []) do
-      value = Changeset.get_field(changeset, field)
-
-      case Validator.validate_number(value, options) do
-        :ok -> changeset
-        {:error, errors} -> add_errors(changeset, field, errors)
-      end
-    end
 
     @doc """
     Casts a nested `%{"amount" => ..., "currency" => ...}` form
@@ -105,11 +77,10 @@ if Code.ensure_loaded?(Ecto.Changeset) do
         {:ok, money} ->
           Changeset.put_change(changeset, field, money)
 
-        {:error, {_, message}} when is_binary(message) ->
-          Changeset.add_error(changeset, field, message, validation: :money)
-
-        {:error, _} ->
-          Changeset.add_error(changeset, field, "is invalid", validation: :money)
+        {:error, %{__exception__: true} = exception} ->
+          Changeset.add_error(changeset, field, Exception.message(exception),
+            validation: :money
+          )
       end
     end
 
@@ -137,7 +108,7 @@ if Code.ensure_loaded?(Ecto.Changeset) do
 
       case Validator.validate_money(value, options) do
         :ok -> changeset
-        {:error, errors} -> add_errors(changeset, field, errors)
+        {:error, %Money.Input.ValidationError{errors: errors}} -> add_errors(changeset, field, errors)
       end
     end
 

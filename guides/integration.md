@@ -174,9 +174,10 @@ def changeset(product, attrs, locale) do
 end
 ```
 
-`cast_money/3` parses with `Money.Input.Parser.parse_number/2`,
-so locale-formatted amounts work even when the JS hook isn't
-loaded.
+`cast_money/3` delegates to `Money.Input.Cast.cast/2`, which
+uses `Money.new/3` with the locale option for map shapes and
+`Money.parse/2` for bare strings — locale-formatted amounts
+work whether or not the JS hook is loaded.
 
 ---
 
@@ -246,8 +247,8 @@ regardless of whether the picker is on:
 ```
 params["product"] = %{
   "price" => %{
-    "amount"   => "1234.56",   # canonical when JS hook is active
-    "currency" => "USD"        # picker selection or fixed attr
+    "amount"   => "1.234,56",   # locale-formatted as the user typed
+    "currency" => "USD"         # picker selection or fixed attr
   },
   "quantity" => "5",
   "rating"   => "4.5"
@@ -258,13 +259,12 @@ This shape is what `Money.Ecto.Composite.Type.cast/1` and
 `Money.Input.Changeset.cast_money/3` both accept directly. No
 custom param-flattening required.
 
-When the AutoNumeric JS hook is loaded it replaces the
-locale-formatted display value with the canonical form
-(period-decimal, no grouping) right before submission, so the
-server-side cast never has to know the user's locale. With JS
-off, the amount arrives locale-formatted and `cast_money/3` (or
-your own `Money.Input.Parser.parse_number/2` call) handles the
-parse.
+**The amount is whatever the user typed**, locale-formatted, on
+both Path A (no JS) and Path B (AutoNumeric loaded). The server
+parses it using the locale you pass to `cast_money/3` or the
+locale embedded in the `Money.Ecto.Composite.Type` field
+options. There's no canonical-vs-locale ambiguity on the wire —
+one shape, parsed once.
 
 ---
 
@@ -333,17 +333,20 @@ end
 
 ## Headless API (no Phoenix)
 
-If you don't need the components, the package's parser, formatter,
-validator, and locale-data modules work standalone:
+If you don't need the components, the package's cast/validate/
+locale modules work standalone. Parsing and formatting use
+`Money` directly — there are no wrappers:
 
 ```elixir
-{:ok, %Decimal{} = decimal} = Money.Input.Parser.parse_number("1.234,56", locale: :de)
-{:ok, %Money{}   = money}   = Money.Input.Parser.parse_money("$1,234.56", locale: :en)
+%Money{} = money = Money.parse("$1,234.56")
+%Money{} = Money.parse("1.234,56", locale: :de, default_currency: :EUR)
 
-Money.Input.Formatter.format_number(decimal, locale: :en)      #=> "1,234.56"
-Money.Input.Formatter.format_money(money,    locale: :de)      #=> "1.234,56 €"
+{:ok, money} = Money.Input.Cast.cast(%{"amount" => "1234.56", "currency" => "USD"})
 
-:ok = Money.Input.Validator.validate_money(Money.new(:USD, "1.50"))
+Money.to_string!(money, locale: :de)
+#=> "1.234,56 $"
+
+:ok = Money.Input.Validator.validate_money(money, max: Money.new(:USD, 9999))
 
 {:ok, info} = Money.Input.Locale.resolve(:de, currency: :EUR)
 info.decimal           #=> ","

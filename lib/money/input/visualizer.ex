@@ -160,7 +160,6 @@ if Code.ensure_loaded?(Plug.Router) do
         deployment_default_locale: deployment_default,
         default_currency:
           param_currency(params, "default_currency", default_currency_for(locale)),
-        number_input: blank_default(Map.get(params, "number_input"), nil),
         money_input: blank_default(Map.get(params, "money_input"), nil),
         picker: picker_default(params),
         preferred_currencies: preferred_currencies(params)

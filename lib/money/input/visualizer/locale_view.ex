@@ -1,12 +1,12 @@
 defmodule Money.Input.Visualizer.LocaleView do
   @moduledoc false
 
-  # A side-by-side card of Money.Input.Locale.resolve/2 output for
-  # every demo locale + the chosen currency. This is the data a
-  # JS hook (e.g. AutoNumeric) would read from data- attributes
-  # to render an input correctly.
+  # A side-by-side card of Money.Input.Currency.currency_for_locale/2
+  # output for every demo locale + the chosen currency. This is
+  # the data a JS hook (e.g. AutoNumeric) would read from data-
+  # attributes to render an input correctly.
 
-  alias Money.Input.Locale
+  alias Money.Input.Currency
   alias Money.Input.Visualizer.Render
 
   def render(params, base) do
@@ -14,16 +14,16 @@ defmodule Money.Input.Visualizer.LocaleView do
 
     locale_rows =
       for {locale, label} <- Render.locale_options() do
-        {locale, label, Locale.resolve(locale, currency: currency)}
+        {locale, label, Currency.currency_for_locale(locale, currency: currency)}
       end
 
     body = [
       "<section class=\"mi-card\">",
       "<h2>Locale display data</h2>",
       "<p class=\"mi-desc\">For every demo locale, the snapshot that ",
-      "<code>Money.Input.Locale.resolve/2</code> returns. This is what ",
-      "the server-side render writes into <code>data-</code> attributes ",
-      "for the JS hook to read.</p>",
+      "<code>Money.Input.Currency.currency_for_locale/2</code> returns. ",
+      "This is what the server-side render writes into ",
+      "<code>data-</code> attributes for the JS hook to read.</p>",
       "<form method=\"get\" action=\"",
       Render.escape(base),
       "/locale\" class=\"mi-form\">",
@@ -85,7 +85,7 @@ defmodule Money.Input.Visualizer.LocaleView do
       Render.escape(data.minus_sign),
       "</td>",
       "<td class=\"mi-mono\">",
-      Render.escape(to_string(data.digit_system)),
+      Render.escape(to_string(data.number_system)),
       "</td>",
       "<td class=\"mi-mono\">",
       Render.escape(currency_label(data.currency)),

@@ -1,41 +1,61 @@
 defmodule Money.Input do
   @moduledoc """
-  Locale-aware number and money form input.
+  Locale-aware money form input.
 
-  This package ships three layers:
+  This package ships:
 
-  1. **Headless** — `Money.Input.Parser`, `Money.Input.Formatter`,
-     `Money.Input.Validator`, `Money.Input.Locale`. Pure Elixir,
-     no Phoenix dependency. Usable from JSON APIs or non-LiveView
-     projects.
+  * **Headless** — `Money.Input.Cast`, `Money.Input.Validator`,
+    `Money.Input.Currency`. Pure Elixir, no Phoenix dependency.
+    User-typed strings are parsed by `Money.parse/2`; money
+    formatting is `Money.to_string/2` directly — there are no
+    wrappers here.
 
-  2. **Phoenix form helpers** *(planned)* — `phoenix_html`-backed
-     helpers for traditional forms.
+  * **Ecto** — `Money.Input.Changeset` (compiled when `:ecto`
+    is loaded).
 
-  3. **LiveView components + JS hook** *(planned)* — a drop-in
-     `<.number_input>` and `<.money_input>` component pair with
-     an AutoNumeric-backed JS hook for live formatting.
+  * **HEEx components** — `Money.Input.Components` (compiled
+    when `:phoenix_live_view` is loaded). Ships `<.money_input>`
+    and `<.currency_picker>` plus an AutoNumeric-backed JS hook
+    in `priv/static/money_input.js`.
 
-  A web-based visualizer is included for local development at
-  `Money.Input.Visualizer`. It runs behind a config flag — see
-  that module for details.
+  * **Visualizer** — `Money.Input.Visualizer` (compiled when
+    `:plug` is loaded) for local development. Behind a config
+    flag — see that module.
+
+  For plain *number* inputs (no currency), see the sibling
+  [`localize_inputs`](https://hex.pm/packages/localize_inputs)
+  package — `<.number_input>` lives there.
 
   ## Quick examples
 
-      iex> Money.Input.Parser.parse_number("1.234,56", locale: :de)
-      {:ok, Decimal.new("1234.56")}
-
-      iex> {:ok, money} = Money.Input.Parser.parse_money("$1,234.56", locale: :en)
+      iex> {:ok, money} = Money.Input.Cast.cast(
+      ...>   %{"amount" => "1.234,56", "currency" => "EUR"},
+      ...>   locale: :de
+      ...> )
       iex> Money.to_string!(money, locale: :de)
-      "1.234,56 $"
+      "1.234,56 €"
 
-      iex> Money.Input.Formatter.format_money(Money.new(:USD, "1234.56"), locale: :en)
+      iex> Money.to_string!(Money.new(:USD, "1234.56"), locale: :en)
       "$1,234.56"
+
+      iex> Money.to_string!(Money.new(:EUR, "1234.56"), locale: :de, currency_symbol: :none)
+      "1.234,56"
 
   """
 
   @doc """
-  Returns the package version.
+  Returns the installed package version as a string.
+
+  ### Returns
+
+  * The version string declared in `mix.exs`.
+
+  ### Examples
+
+      iex> Money.Input.version() |> Version.parse!()
+      iex> :ok
+      :ok
+
   """
   @spec version() :: String.t()
   def version do

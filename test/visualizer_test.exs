@@ -38,7 +38,7 @@ defmodule Money.Input.VisualizerTest do
   describe "Standalone.start/1" do
     test "refuses to start when disabled" do
       Application.delete_env(:money_input, :visualizer)
-      assert {:error, :visualizer_disabled} = Standalone.start([])
+      assert {:error, %Money.Input.VisualizerDisabledError{}} = Standalone.start([])
     end
 
     test "boots Bandit when enabled and serves /input" do
@@ -78,16 +78,17 @@ defmodule Money.Input.VisualizerTest do
       response =
         conn.("/input", %{
           "locale" => "en",
-          "currency" => "USD",
-          "number_input" => "1,234.56",
-          "money_input" => "$1,234.56"
+          "default_currency" => "USD",
+          "submitted" => "1",
+          "money_input[amount]" => "1234.56",
+          "money_input[currency]" => "USD"
         })
 
       assert response.status == 200
       body = response.resp_body
       assert body =~ "Money.Input.Visualizer"
-      assert body =~ "Parsed (Decimal)"
-      assert body =~ "1234.56"
+      assert body =~ "Money Input Components"
+      assert body =~ "Cast to Money"
     end
 
     test "/parse renders the cross-locale table", %{conn: conn} do

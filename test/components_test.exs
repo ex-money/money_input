@@ -5,44 +5,6 @@ defmodule Money.Input.ComponentsTest do
 
   alias Money.Input.Components
 
-  describe "number_input/1" do
-    test "renders the native HTML baseline" do
-      html = render_component(&Components.number_input/1, base_assigns(:quantity))
-      assert html =~ ~s(class="money-input-wrapper money-input-number )
-      assert html =~ ~s(data-money-input="number")
-      assert html =~ ~s(inputmode="decimal")
-      assert html =~ ~s(name="demo[quantity]")
-    end
-
-    test "switches to inputmode=numeric when :integer is true" do
-      html =
-        render_component(&Components.number_input/1, base_assigns(:quantity, %{integer: true}))
-
-      assert html =~ ~s(inputmode="numeric")
-      assert html =~ ~s(data-integer="true")
-    end
-
-    test "renders locale-specific separators in data attrs" do
-      html =
-        render_component(&Components.number_input/1, base_assigns(:quantity, %{locale: "de"}))
-
-      assert html =~ ~s(data-locale="de")
-      assert html =~ ~s(data-decimal=",")
-      assert html =~ ~s(data-group=".")
-    end
-
-    test "min/max land on the wrapper as data-min and data-max" do
-      html =
-        render_component(
-          &Components.number_input/1,
-          base_assigns(:quantity, %{min: 1, max: 999})
-        )
-
-      assert html =~ ~s(data-min="1")
-      assert html =~ ~s(data-max="999")
-    end
-  end
-
   describe "money_input/1" do
     test "renders prefix symbol for en-US" do
       html =
@@ -200,17 +162,6 @@ defmodule Money.Input.ComponentsTest do
   end
 
   describe "changeset" do
-    test "validate_number/3 adds errors via the validator" do
-      types = %{quantity: :decimal}
-
-      changeset =
-        Ecto.Changeset.cast({%{}, types}, %{"quantity" => Decimal.new("100")}, [:quantity])
-
-      changeset = Money.Input.Changeset.validate_number(changeset, :quantity, max: 10)
-      refute changeset.valid?
-      assert {"must be at most 10", _} = changeset.errors[:quantity]
-    end
-
     test "cast_money/3 turns a nested-map submission into a Money.t" do
       changeset =
         Ecto.Changeset.cast(
@@ -252,11 +203,6 @@ defmodule Money.Input.ComponentsTest do
   end
 
   # ── helpers ─────────────────────────────────────────────────
-
-  defp base_assigns(field, overrides \\ %{}) do
-    form = Phoenix.HTML.FormData.to_form(%{Atom.to_string(field) => "5"}, as: :demo)
-    Map.merge(%{form: form, field: field, locale: "en"}, overrides)
-  end
 
   defp money_assigns(field, overrides) do
     form = Phoenix.HTML.FormData.to_form(%{Atom.to_string(field) => "1234.56"}, as: :demo)

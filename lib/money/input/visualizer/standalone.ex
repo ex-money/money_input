@@ -58,8 +58,8 @@ if Code.ensure_loaded?(Bandit) do
 
     * `{:ok, pid}` on success.
 
-    * `{:error, :visualizer_disabled}` when the visualizer has
-      not been enabled. See the module doc.
+    * `{:error, %Money.Input.VisualizerDisabledError{}}` when
+      the visualizer has not been enabled. See the module doc.
 
     * `{:error, reason}` on other failures (e.g. port-in-use).
 
@@ -82,7 +82,7 @@ if Code.ensure_loaded?(Bandit) do
           ip: ip_tuple(ip)
         )
       else
-        {:error, :visualizer_disabled}
+        {:error, Money.Input.VisualizerDisabledError.exception([])}
       end
     end
 

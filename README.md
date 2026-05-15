@@ -1,9 +1,13 @@
 # Money.Input
 
-Locale-aware number and money form input — headless parser /
-formatter / validator, Phoenix HEEx components (`<.number_input>`,
-`<.money_input>`, `<.currency_picker>`), an AutoNumeric-backed JS
-hook, and a Plug-based visualizer for local development.
+Locale-aware money form input — `<.money_input>` and
+`<.currency_picker>` Phoenix HEEx components, an
+AutoNumeric-backed JS hook, an Ecto changeset bridge, and a
+Plug-based visualizer for local development.
+
+For a plain *number* input (no currency), see the sibling
+[`localize_inputs`](https://hex.pm/packages/localize_inputs)
+package — `<.number_input>` lives there.
 
 For a full end-to-end Phoenix integration walkthrough — Elixir
 deps, JS deps, asset wiring, schema, LiveView — read
@@ -15,59 +19,97 @@ deps, JS deps, asset wiring, schema, LiveView — read
 def deps do
   [
     {:money_input, "~> 0.1.0"},
-    # Optional — needed only for the components / visualizer:
+
+    # Components and changeset bridge:
     {:phoenix_html, "~> 4.0"},
     {:phoenix_live_view, "~> 1.0"},
     {:ecto, "~> 3.10"},
-    {:plug, "~> 1.15"},
-    {:bandit, "~> 1.5"}
+
+    # Visualizer (dev only):
+    {:plug, "~> 1.15", only: :dev},
+    {:bandit, "~> 1.5", only: :dev}
   ]
 end
 ```
+
+Every Phoenix/Ecto/Plug/Bandit dep is optional — the headless
+layer compiles without any of them, and each higher layer
+activates when its dep is present.
 
 ## Layered API
 
 ### 1. Headless (no Phoenix dependency)
 
+Three focused modules. Parsing and formatting use `Money` and
+`Localize.Number` directly — there are no wrappers here.
+
 ```elixir
-{:ok, %Decimal{} = decimal} = Money.Input.Parser.parse_number("1.234,56", locale: :de)
-{:ok, %Money{} = money}     = Money.Input.Parser.parse_money("$1,234.56", locale: :en)
+# Cast — turn a form-submission *map*, a string, or a Money into a Money.t
+{:ok, %Money{}} = Money.Input.Cast.cast(
+  %{"amount" => "1.234,56", "currency" => "EUR"},
+  locale: :de
+)
+{:ok, %Money{}} = Money.Input.Cast.cast("$1,234.56", locale: :en)
 
-Money.Input.Formatter.format_number(decimal, locale: :en)             #=> "1,234.56"
-Money.Input.Formatter.format_money(money,    locale: :de)             #=> "1.234,56 €"
-Money.Input.Formatter.format_money(money,    locale: :en,
-                                  no_symbol: true)                   #=> "1,234.56"
-
-:ok = Money.Input.Validator.validate_money(Money.new(:USD, "1.50"))
+# Validator — apply *business rules* (bounds, precision, required, currency match)
+:ok = Money.Input.Validator.validate_money(Money.new(:USD, "1.50"), max: Money.new(:USD, 9999))
 {:error, [{:decimals, _}]} = Money.Input.Validator.validate_money(Money.new(:JPY, "1.5"))
 
-{:ok, info} = Money.Input.Locale.resolve(:de, currency: :EUR)
+# Currency — locale display data (separators, symbol position, currency precision)
+{:ok, info} = Money.Input.Currency.currency_for_locale(:de, currency: :EUR)
 info.decimal           #=> ","
-info.group             #=> "."
 info.symbol            #=> "€"
-info.symbol_position   #=> :suffix
+info.symbol_position   #=> :suffix  # derived from the CLDR currency format pattern
 info.iso_digits        #=> 2
+info.number_system     #=> :latn
 ```
+
+**Parsing a user-typed money string is `Money.parse/2`**, which
+already handles surrounding whitespace, accounting parens, and
+currency symbols/ISO codes natively:
+
+```elixir
+%Money{} = Money.parse("$1,234.56")
+%Money{} = Money.parse("(1.234,56)", locale: :de, default_currency: :EUR)
+```
+
+**Money formatting is `Money.to_string/2`** — pass
+`currency_symbol: :none` for the amount alone (the shape a
+component would render into the input field, with the symbol
+positioned as a separate adornment):
+
+```elixir
+Money.to_string!(Money.new(:EUR, "1234.56"), locale: :de)
+#=> "1.234,56 €"
+
+Money.to_string!(Money.new(:EUR, "1234.56"), locale: :de, currency_symbol: :none)
+#=> "1.234,56"
+```
+
+`Money.Input.Cast` vs `Money.Input.Validator`: **shape vs.
+business rules**. Cast answers "can I parse this into a Money?".
+Validator answers "is this Money acceptable under my app's
+rules?".
 
 ### 2. Ecto Changeset
 
 ```elixir
 def changeset(product, attrs) do
   product
-  |> Ecto.Changeset.cast(attrs, [:price, :quantity])
+  |> Ecto.Changeset.cast(attrs, [:price])
   |> Money.Input.Changeset.validate_money(:price,
        min: Money.new(:USD, "0.01"),
        max: Money.new(:USD, 9999))
-  |> Money.Input.Changeset.validate_number(:quantity, min: 1)
 end
 ```
+
+When the field isn't typed as `Money.Ecto.Composite.Type` (which
+casts the map shape automatically), use
+`Money.Input.Changeset.cast_money/3` first.
 
 ### 3. HEEx components
 
 ```heex
-<.number_input form={@form} field={:quantity} integer={true} min={1} max={999} />
-<.number_input form={@form} field={:rating}   min={0} max={5} decimals={1} />
-
 <%!-- Single fixed currency --%>
 <.money_input form={@form} field={:price} default_currency={:USD} />
 
@@ -155,7 +197,7 @@ Views:
 * `/parse` — one input × every locale (separator inversion,
   paste tolerance).
 * `/format` — one parsed value × every locale.
-* `/locale` — `Money.Input.Locale.resolve/2` snapshot per locale.
+* `/locale` — `Money.Input.Currency.currency_for_locale/2` snapshot per locale.
 
 The standalone helper refuses to start unless the config flag is
 set or `enabled: true` is passed explicitly, so a developer tool
@@ -173,26 +215,23 @@ can't deploy to production by accident.
 ## Architecture map
 
 ```
-                       Localize.Number.Parser    Money.parse
-                                  │                  │
-                                  └────────┬─────────┘
-                                           ▼
-                       ┌────────────────────────────────┐
-                       │ Money.Input.Parser              │  ← front door
-                       │ Money.Input.Formatter           │
-                       │ Money.Input.Validator           │
-                       │ Money.Input.Locale              │
-                       └────────────────────────────────┘
-                                  │
-                       ┌──────────┴──────────┐
-                       ▼                     ▼
-              Money.Input.Changeset    Money.Input.Components
-              (Ecto)                  ─ number_input
-                                      ─ money_input
-                                      ─ currency_picker
-                                           │
-                                  priv/static/money_input.{js,css}
-                                  (LiveView hooks, AutoNumeric wrapper)
+                     Money.parse / Money.to_string / Money.new
+                                       │
+                                       ▼
+                  ┌───────────────────────────────────────────┐
+                  │ Money.Input.Cast       ─ inputs → Money   │
+                  │ Money.Input.Validator  ─ business rules   │
+                  │ Money.Input.Currency   ─ display data     │
+                  └───────────────────────────────────────────┘
+                                       │
+                       ┌───────────────┴──────────────┐
+                       ▼                              ▼
+              Money.Input.Changeset           Money.Input.Components
+              (Ecto bridge)                   ─ money_input
+                                              ─ currency_picker
+                                                       │
+                                          priv/static/money_input.{js,css}
+                                          (LiveView hooks, AutoNumeric)
 ```
 
 ## License

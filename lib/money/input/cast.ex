@@ -2,38 +2,33 @@ defmodule Money.Input.Cast do
   @moduledoc """
   Casts a form-submission shape into a `Money.t/0`.
 
-  This is the structured-input counterpart to
-  `Money.Input.Parser`. Where `parse_money/2` interprets a
-  user-typed *string* (`"$1,234.56"`, `"1.234,56"`), `cast/2`
-  consumes the *map* shape `<.money_input>` submits or that
-  comes back from `Money.Ecto.Composite.Type`:
+  `cast/2` consumes the four shapes a user-input pipeline can
+  produce:
 
-      %{"amount" => "1234.56", "currency" => "USD"}
+  * `nil` and blank-amount maps return `{:ok, nil}` — the field
+    wasn't filled in.
+
+  * `Money.t/0` round-trips unchanged.
+
+  * `%{"amount", "currency"}` (or `%{amount, currency}`) — the
+    nested form-submission shape that `<.money_input>` produces
+    and that `Money.Ecto.Composite.Type` accepts. The amount
+    field is built with `Money.new/3`; pass `:locale` if you
+    need to parse a locale-formatted amount string.
+
+  * A bare binary (`"$1,234.56"`, `"1.234,56"`) delegates to
+    `Money.parse/2`. Money.parse already handles surrounding
+    whitespace, accounting parens, currency symbols and ISO
+    codes.
 
   The function is modelled after `Money.Ecto.Composite.Type.cast/2`
   (in `money_sql`) so behaviour stays consistent across the two
   paths. We host our own copy to avoid taking on `ecto_sql` as a
   hard dependency.
 
-  Casting is locale-aware: amounts can arrive locale-formatted
-  (`"1.234,56"`) when the AutoNumeric JS hook isn't loaded.
-  `cast/2` parses them via `Money.new/3`, which is locale-aware
-  when `:locale` is in `options`.
-
   """
 
-  @typedoc """
-  Inputs accepted by `cast/2`.
-
-  * `nil` and blank-amount maps return `{:ok, nil}` — the field
-    wasn't filled in.
-  * `Money.t/0` is round-tripped.
-  * A `%{"amount", "currency"}` (or `%{amount, currency}`) map
-    is the nested form-submission shape.
-  * A binary delegates to `Money.Input.Parser.parse_money/2` for
-    convenience; prefer `parse_money` directly when you know the
-    input is a user-typed string.
-  """
+  @typedoc "Inputs accepted by `cast/2`. See the module docs."
   @type input ::
           nil
           | Money.t()
@@ -48,8 +43,8 @@ defmodule Money.Input.Cast do
   * `input` is the value to cast (see `t:input/0`).
 
   * `options` is a keyword list of options forwarded to
-    `Money.new/3` (and to `Money.Input.Parser.parse_money/2`
-    when `input` is a string).
+    `Money.new/3` for map inputs and `Money.parse/2` for string
+    inputs.
 
   ### Options
 
@@ -107,13 +102,29 @@ defmodule Money.Input.Cast do
     do_cast(currency, amount, options)
   end
 
+  def cast("", _options), do: {:ok, nil}
+
   def cast(string, options) when is_binary(string) do
-    Money.Input.Parser.parse_money(string, options)
+    # `Money.parse/2` already handles surrounding whitespace,
+    # accounting parens, and currency symbols/ISO codes natively.
+    # The only translation we do is `:currency` → `:default_currency`
+    # so the API surface here matches the map clause above.
+    money_parse_options =
+      case Keyword.pop(options, :currency) do
+        {nil, options} -> options
+        {currency, options} -> Keyword.put_new(options, :default_currency, currency)
+      end
+
+    string
+    |> Money.parse(money_parse_options)
+    |> normalise_money_result()
   end
 
   def cast(_other, _options) do
     {:error,
-     {ArgumentError, "input must be a Money.t, a map with amount and currency, or a string"}}
+     ArgumentError.exception(
+       "input must be a Money.t, a map with amount and currency, or a string"
+     )}
   end
 
   # ── internal ────────────────────────────────────────────────
@@ -122,14 +133,24 @@ defmodule Money.Input.Cast do
   defp do_cast(_currency, nil, _options), do: {:ok, nil}
 
   defp do_cast(nil, _amount, _options),
-    do: {:error, {Money.UnknownCurrencyError, "Currency must not be nil"}}
+    do: {:error, Money.UnknownCurrencyError.exception("Currency must not be nil")}
 
   defp do_cast(currency, amount, options) do
-    case Money.new(currency, amount, money_new_options(options)) do
-      %Money{} = money -> {:ok, money}
-      {:error, _} = error -> error
-    end
+    currency
+    |> Money.new(amount, money_new_options(options))
+    |> normalise_money_result()
   end
+
+  # `Money.parse/2` and `Money.new/3` both return their errors as
+  # `{module, message}` tuples — Money's legacy convention. Lift
+  # them into proper exception structs at this library's
+  # boundary so the public API exposes one consistent shape.
+  defp normalise_money_result(%Money{} = money), do: {:ok, money}
+  defp normalise_money_result({:error, {module, message}}) when is_atom(module),
+    do: {:error, module.exception(message)}
+  defp normalise_money_result({:error, %{__exception__: true} = exception}),
+    do: {:error, exception}
+  defp normalise_money_result({:error, other}), do: {:error, other}
 
   # `Money.new/3` parses string amounts locale-aware when `:locale`
   # is supplied, so this is the bridge to our caller's locale. Any

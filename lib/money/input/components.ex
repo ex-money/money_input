@@ -1,30 +1,32 @@
 if Code.ensure_loaded?(Phoenix.Component) do
   defmodule Money.Input.Components do
     @moduledoc """
-    HEEx components for locale-aware number and money input.
+    HEEx components for locale-aware money input.
 
-    Three components ship from this module:
+    Two components ship from this module:
 
-    * `number_input/1` — plain-number input.
     * `money_input/1` — money input with a fixed currency or an
       embedded `currency_picker/1`.
     * `currency_picker/1` — first-class searchable currency picker
       (flag glyphs, recents in `localStorage`, mobile sheet
       variant, keyboard nav).
 
-    All three render their HTML baseline server-side and degrade
+    Both render their HTML baseline server-side and degrade
     gracefully when JS is disabled. With the JS hook loaded
     (`priv/static/money_input.js`), they upgrade to live
     formatting and full picker behaviour.
+
+    For a plain *number* input (no currency), use
+    [`Localize.Inputs.Components.number_input/1`](https://hexdocs.pm/localize_inputs)
+    from the sibling `localize_inputs` package.
 
     ## Setup
 
     Add the JS hooks in your `assets/js/app.js`:
 
-        import { MoneyInput, NumberInput, CurrencyPicker } from "money_input"
+        import { MoneyInput, CurrencyPicker } from "money_input"
         let Hooks = {}
         Hooks.MoneyInput = MoneyInput
-        Hooks.NumberInput = NumberInput
         Hooks.CurrencyPicker = CurrencyPicker
 
     And install the AutoNumeric peer dep:
@@ -37,82 +39,8 @@ if Code.ensure_loaded?(Phoenix.Component) do
 
     use Phoenix.Component
 
-    alias Money.Input.{Formatter, Locale}
+    alias Money.Input.Currency
     alias Money.Input.Components.Flags
-
-    @doc """
-    Locale-aware plain-number input.
-
-    Returns `Decimal.t/0` on form submission (or `integer/0` when
-    `integer: true`).
-
-    ### Attributes
-
-    See the source for the full list. The most commonly used:
-
-    * `:form` — the `Phoenix.HTML.Form` the field belongs to.
-    * `:field` — the form field as an atom.
-    * `:locale` — display locale (defaults to
-      `Localize.get_locale/0`).
-    * `:integer` — when `true`, accept only integers.
-    * `:min`, `:max` — bounds.
-    * `:decimals` — max fractional digits.
-
-    ### Examples
-
-        <.number_input form={@form} field={:quantity} integer={true} min={1} max={999} />
-        <.number_input form={@form} field={:rating} min={0} max={5} decimals={1} />
-
-    """
-    attr(:form, Phoenix.HTML.Form, required: true)
-    attr(:field, :atom, required: true)
-    attr(:value, :any, default: nil)
-    attr(:locale, :string, default: nil)
-    attr(:integer, :boolean, default: false)
-    attr(:min, :any, default: nil)
-    attr(:max, :any, default: nil)
-    attr(:decimals, :integer, default: nil)
-    attr(:align, :atom, default: :left, values: [:left, :right, :center])
-    attr(:placeholder, :string, default: nil)
-    attr(:js, :boolean, default: true)
-    attr(:class, :string, default: nil)
-    attr(:input_class, :string, default: nil)
-    attr(:rest, :global, include: ~w(disabled readonly required autofocus))
-
-    def number_input(assigns) do
-      assigns = assigns |> assign_common() |> assign_number_value()
-
-      ~H"""
-      <div
-        class={["money-input-wrapper", "money-input-number", @class]}
-        data-money-input="number"
-        data-locale={@locale_data.locale}
-        data-decimal={@locale_data.decimal}
-        data-group={@locale_data.group}
-        data-digit-system={@locale_data.digit_system}
-        data-minus={@locale_data.minus_sign}
-        data-integer={to_string(@integer)}
-        data-decimals={@decimals}
-        data-min={value_attr(@min)}
-        data-max={value_attr(@max)}
-        phx-hook={if @js, do: "NumberInput"}
-        id={"#{@id}-wrapper"}
-      >
-        <input
-          type="text"
-          inputmode={if @integer, do: "numeric", else: "decimal"}
-          name={@name}
-          id={@id}
-          value={@formatted_value}
-          class={["money-input-field", text_align_class(@align), @input_class]}
-          autocomplete="off"
-          dir="ltr"
-          placeholder={@placeholder}
-          {@rest}
-        />
-      </div>
-      """
-    end
 
     @doc """
     Locale-aware money input.
@@ -191,7 +119,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
         data-currency={@effective_currency && to_string(@effective_currency)}
         data-decimal={@locale_data.decimal}
         data-group={@locale_data.group}
-        data-digit-system={@locale_data.digit_system}
+        data-number-system={@locale_data.number_system}
         data-minus={@locale_data.minus_sign}
         data-iso-digits={@locale_data.iso_digits}
         data-symbol-position={@symbol_position}
@@ -427,38 +355,6 @@ if Code.ensure_loaded?(Phoenix.Component) do
 
     # ── Internal: shared assigns ──────────────────────────────
 
-    defp assign_common(assigns, options \\ []) do
-      locale = assigns[:locale] || Localize.get_locale()
-      currency = Keyword.get(options, :currency)
-      symbol_kind = Keyword.get(options, :symbol_kind, :symbol)
-
-      {:ok, locale_data} =
-        Locale.resolve(locale, currency: currency, symbol_kind: symbol_kind)
-
-      field_struct = assigns.form[assigns.field]
-      name = field_struct.name
-      id = field_struct.id
-
-      assigns
-      |> assign(:locale, locale)
-      |> assign(:locale_data, locale_data)
-      |> assign(:name, name)
-      |> assign(:id, id)
-      |> assign_new(:placeholder, fn -> nil end)
-      |> assign_new(:class, fn -> nil end)
-      |> assign_new(:input_class, fn -> nil end)
-    end
-
-    defp assign_number_value(assigns) do
-      explicit = assigns.value
-      form_value = (assigns.form[assigns.field] || %{}).value
-
-      raw = explicit || form_value
-      formatted = Formatter.format_number(raw, locale: assigns.locale)
-
-      assign(assigns, :formatted_value, formatted)
-    end
-
     defp assign_money_value(assigns) do
       explicit = assigns.value
       form_value = (assigns.form[assigns.field] || %{}).value
@@ -467,11 +363,31 @@ if Code.ensure_loaded?(Phoenix.Component) do
       {amount, currency_from_value} = extract_amount_and_currency(raw)
       effective_currency = currency_from_value || assigns.default_currency
 
-      formatted = Formatter.format_number(amount, locale: assigns.locale)
+      formatted = format_amount(amount, effective_currency, assigns.locale)
 
       assigns
       |> assign(:formatted_value, formatted)
       |> assign(:effective_currency, effective_currency)
+    end
+
+    # Format the amount portion only (no currency symbol) for the
+    # input's `value` attribute. The symbol is rendered as a
+    # separate adornment outside the input. `Money.to_string!`
+    # with `currency_symbol: :none` does the locale-correct
+    # rendering — separators, spacing, and currency-aware
+    # fractional digits (JPY 0, USD 2, BHD 3).
+    #
+    # `Money.new/3` itself needs the locale to parse a
+    # locale-formatted amount string (Path A fallback path) —
+    # without it, `"1.234,56"` is read as `"1.23456"`.
+    defp format_amount(nil, _currency, _locale), do: ""
+    defp format_amount(_amount, nil, _locale), do: ""
+
+    defp format_amount(amount, currency, locale) do
+      Money.to_string!(Money.new(currency, amount, locale: locale),
+        locale: locale,
+        currency_symbol: :none
+      )
     end
 
     # money_input receives values in four shapes; we normalise to
@@ -531,7 +447,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
       locale = assigns[:locale] || Localize.get_locale()
 
       {:ok, locale_data} =
-        Locale.resolve(locale,
+        Currency.currency_for_locale(locale,
           currency: assigns.effective_currency,
           symbol_kind: assigns.symbol_kind
         )
@@ -556,7 +472,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
       preferred = assigns.preferred || []
       locale_id = locale_id(assigns.locale)
 
-      {:ok, locale_data} = Locale.resolve(locale_id)
+      {:ok, locale_data} = Currency.currency_for_locale(locale_id)
 
       preferred_set = MapSet.new(preferred)
 

@@ -38,7 +38,7 @@ function readData(el) {
     decimal: d.decimal || ".",
     group: d.group || ",",
     minus: d.minus || "-",
-    digitSystem: d.digitSystem || "latn",
+    numberSystem: d.numberSystem || "latn",
     integer: d.integer === "true",
     decimals: num(d.decimals),
     isoDigits: num(d.isoDigits),
@@ -75,27 +75,6 @@ function buildAutoNumericOptions(data, kind) {
   return opts;
 }
 
-function attachCanonicalSubmit(input, getCanonical) {
-  // On submit, replace the locale-formatted display value with
-  // the canonical period-decimal form (e.g. "1.234,56" → "1234.56")
-  // so the server-side cast doesn't need to know the locale to
-  // parse it. The change is in-place on the same input, which
-  // means the field name stays nested (`price[amount]`) and the
-  // server sees a clean `%{"amount" => "1234.56", "currency" =>
-  // "EUR"}` map ready for `Money.Ecto.Composite.Type` or
-  // `Money.Input.Changeset.cast_money/3`.
-  const form = input.form;
-  if (!form) return () => {};
-  const handler = () => {
-    const canonical = getCanonical();
-    if (canonical !== null && canonical !== undefined) {
-      input.value = canonical;
-    }
-  };
-  form.addEventListener("submit", handler);
-  return () => form.removeEventListener("submit", handler);
-}
-
 function cssEscape(value) {
   if (window.CSS && CSS.escape) return CSS.escape(value);
   return value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
@@ -109,7 +88,7 @@ function mountInput(hook, kind) {
   hook.data = data;
 
   if (!AutoNumericCtor) {
-    // Path A fallback. The form still submits; the server-side
+    // No-JS fallback. The form still submits; the server-side
     // parser still accepts the locale-typed string. We only lose
     // the live formatting + cursor preservation.
     hook.input.addEventListener("paste", (event) =>
@@ -123,9 +102,12 @@ function mountInput(hook, kind) {
     buildAutoNumericOptions(data, kind),
   );
 
-  hook.detachSubmit = attachCanonicalSubmit(hook.input, () =>
-    hook.an.getNumber(),
-  );
+  // Deliberately *no* submit-time canonicalisation. The form
+  // value is the user's locale-formatted string as they see it
+  // on screen. The server-side cast uses the locale option to
+  // parse it. This keeps the wire format identical whether or
+  // not AutoNumeric is loaded — no canonical-vs-locale-formatted
+  // ambiguity for the server to puzzle out.
 
   if (kind === "money") {
     // Listen for currency changes from a sibling picker so the
@@ -147,7 +129,6 @@ function mountInput(hook, kind) {
 }
 
 function destroyInput(hook) {
-  if (hook.detachSubmit) hook.detachSubmit();
   if (hook.an) hook.an.remove();
   if (hook.onCurrencyChange)
     hook.el.removeEventListener(
@@ -175,15 +156,6 @@ function paste_sanitize(event, data) {
   const cursor = start + cleaned.length;
   input.setSelectionRange(cursor, cursor);
 }
-
-export const NumberInput = {
-  mounted() {
-    mountInput(this, "number");
-  },
-  destroyed() {
-    destroyInput(this);
-  },
-};
 
 export const MoneyInput = {
   mounted() {
@@ -470,4 +442,4 @@ export const CurrencyPicker = {
   },
 };
 
-export default { NumberInput, MoneyInput, CurrencyPicker, configure };
+export default { MoneyInput, CurrencyPicker, configure };
