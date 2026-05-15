@@ -1,0 +1,46 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+
+#: lib/money/input/components.ex:501
+#, elixir-autogen, elixir-format
+msgid "All currencies"
+msgstr "Alle Währungen"
+
+#: lib/money/input/components.ex:308
+#, elixir-autogen, elixir-format
+msgid "Choose currency"
+msgstr "Währung auswählen"
+
+#: lib/money/input/components.ex:323
+#, elixir-autogen, elixir-format
+msgid "Close currency picker"
+msgstr "Währungsauswahl schließen"
+
+#: lib/money/input/components.ex:317
+#, elixir-autogen, elixir-format
+msgid "Filter currencies"
+msgstr "Währungen filtern"
+
+#: lib/money/input/components.ex:351
+#, elixir-autogen, elixir-format
+msgid "No matches"
+msgstr "Keine Treffer"
+
+#: lib/money/input/components.ex:500
+#, elixir-autogen, elixir-format
+msgid "Preferred"
+msgstr "Bevorzugt"
+
+#: lib/money/input/components.ex:316
+#, elixir-autogen, elixir-format
+msgid "Search code, name, country, symbol…"
+msgstr "Code, Name, Land oder Symbol suchen…"

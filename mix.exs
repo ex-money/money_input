@@ -112,6 +112,7 @@ defmodule MoneyInput.MixProject do
       {:phoenix_live_view, "~> 1.0", optional: true},
       {:ecto, "~> 3.10", optional: true},
       {:gettext, "~> 1.0", optional: true},
+      {:localize_web, "~> 0.7", optional: true},
       {:plug, "~> 1.15", optional: true},
       {:bandit, "~> 1.5", optional: true},
       {:ex_doc, "~> 0.30", only: [:dev, :release], runtime: false},

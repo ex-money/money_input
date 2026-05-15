@@ -1,0 +1,47 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/money/input/components.ex:501
+#, elixir-autogen, elixir-format
+msgid "All currencies"
+msgstr ""
+
+#: lib/money/input/components.ex:308
+#, elixir-autogen, elixir-format
+msgid "Choose currency"
+msgstr ""
+
+#: lib/money/input/components.ex:323
+#, elixir-autogen, elixir-format
+msgid "Close currency picker"
+msgstr ""
+
+#: lib/money/input/components.ex:317
+#, elixir-autogen, elixir-format
+msgid "Filter currencies"
+msgstr ""
+
+#: lib/money/input/components.ex:351
+#, elixir-autogen, elixir-format
+msgid "No matches"
+msgstr ""
+
+#: lib/money/input/components.ex:500
+#, elixir-autogen, elixir-format
+msgid "Preferred"
+msgstr ""
+
+#: lib/money/input/components.ex:316
+#, elixir-autogen, elixir-format
+msgid "Search code, name, country, symbol…"
+msgstr ""

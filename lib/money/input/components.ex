@@ -1,4 +1,5 @@
-if Code.ensure_loaded?(Phoenix.Component) do
+if Code.ensure_loaded?(Phoenix.Component) and
+     Code.ensure_loaded?(Gettext.Backend) do
   defmodule Money.Input.Components do
     @moduledoc """
     HEEx components for locale-aware money input.
@@ -38,6 +39,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
     """
 
     use Phoenix.Component
+    use Localize.Message.Sigils, backend: Money.Input.Gettext
 
     alias Money.Input.Currency
     alias Money.Input.Components.Flags
@@ -303,7 +305,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
           class={["currency-picker-overlay", @overlay_class]}
           data-currency-picker-overlay
           role="dialog"
-          aria-label="Choose currency"
+          aria-label={~t"Choose currency"}
           hidden
         >
           <div class="currency-picker-search-row">
@@ -311,14 +313,14 @@ if Code.ensure_loaded?(Phoenix.Component) do
               type="search"
               class="currency-picker-search"
               data-currency-picker-search
-              placeholder="Search code, name, country, symbol…"
-              aria-label="Filter currencies"
+              placeholder={~t"Search code, name, country, symbol…"}
+              aria-label={~t"Filter currencies"}
             />
             <button
               type="button"
               class="currency-picker-close"
               data-currency-picker-close
-              aria-label="Close currency picker"
+              aria-label={~t"Close currency picker"}
             >×</button>
           </div>
           <ul class="currency-picker-list" role="listbox" data-currency-picker-list>
@@ -346,7 +348,7 @@ if Code.ensure_loaded?(Phoenix.Component) do
                 <% end %>
               <% end %>
             <% end %>
-            <li class="currency-picker-empty" data-currency-picker-empty hidden>No matches</li>
+            <li class="currency-picker-empty" data-currency-picker-empty hidden>{~t"No matches"}</li>
           </ul>
         </div>
       </div>
@@ -495,8 +497,8 @@ if Code.ensure_loaded?(Phoenix.Component) do
         |> Enum.sort_by(& &1.name)
 
       sections = [
-        {"Preferred", preferred_rows},
-        {"All currencies", all_rows}
+        {~t"Preferred", preferred_rows},
+        {~t"All currencies", all_rows}
       ]
 
       id = assigns[:id] || "currency-picker-#{System.unique_integer([:positive])}"
