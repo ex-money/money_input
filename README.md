@@ -171,8 +171,7 @@ And in your CSS:
 @import "money_input/priv/static/money_input.css";
 ```
 
-Without AutoNumeric loaded the inputs still work (Path A
-fallback) — only live formatting and cursor preservation are
+Without AutoNumeric loaded the inputs still work — only live formatting and cursor preservation are
 absent.
 
 ## Visualizer
@@ -191,48 +190,12 @@ forward "/money-input", Money.Input.Visualizer
 
 Views:
 
-* `/input` — live HEEx renders of the actual components. Picks
-  locale + currency, embeds the picker, mounts AutoNumeric from
-  jsdelivr so the live behaviour is observable.
-* `/parse` — one input × every locale (separator inversion,
-  paste tolerance).
+* `/input` — live HEEx renders of the actual components. Picks locale + currency, embeds the picker, mounts AutoNumeric from jsdelivr so the live behaviour is observable.
+* `/parse` — one input × every locale (separator inversion, paste tolerance).
 * `/format` — one parsed value × every locale.
 * `/locale` — `Money.Input.Currency.currency_for_locale/2` snapshot per locale.
 
-The standalone helper refuses to start unless the config flag is
-set or `enabled: true` is passed explicitly, so a developer tool
-can't deploy to production by accident.
-
-## Out of scope (deliberate)
-
-* Wise's bidirectional FX flow with live conversion — compose two
-  `<.money_input>` components and wire your own rate provider.
-* Scientific notation input — banking apps universally reject it
-  (AutoNumeric does too).
-* Keyboard increment/decrement — opt-in via AutoNumeric options
-  if you need it.
-
-## Architecture map
-
-```
-                     Money.parse / Money.to_string / Money.new
-                                       │
-                                       ▼
-                  ┌───────────────────────────────────────────┐
-                  │ Money.Input.Cast       ─ inputs → Money   │
-                  │ Money.Input.Validator  ─ business rules   │
-                  │ Money.Input.Currency   ─ display data     │
-                  └───────────────────────────────────────────┘
-                                       │
-                       ┌───────────────┴──────────────┐
-                       ▼                              ▼
-              Money.Input.Changeset           Money.Input.Components
-              (Ecto bridge)                   ─ money_input
-                                              ─ currency_picker
-                                                       │
-                                          priv/static/money_input.{js,css}
-                                          (LiveView hooks, AutoNumeric)
-```
+The standalone helper refuses to start unless the config flag is set or `enabled: true` is passed explicitly, so a developer tool can't deploy to production by accident.
 
 ## License
 

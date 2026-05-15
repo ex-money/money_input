@@ -530,12 +530,12 @@ if Code.ensure_loaded?(Phoenix.Component) do
       |> assign_new(:row_class, fn -> nil end)
     end
 
-    defp currency_row(code, _locale_id) do
+    defp currency_row(code, locale_id) do
       case Money.Currency.currency_for_code(code) do
         {:ok, currency} ->
           %{
             code: to_string(code),
-            name: to_string(currency.name),
+            name: localized_currency_name(code, currency, locale_id),
             country: Flags.country_for(code) || "",
             symbol: currency.symbol,
             flag: flag_for(code),
@@ -544,6 +544,17 @@ if Code.ensure_loaded?(Phoenix.Component) do
 
         _ ->
           nil
+      end
+    end
+
+    # CLDR display names for currencies vary by locale (e.g. "Euro"
+    # in en, "Euro" in de, "ユーロ" in ja, "يورو" in ar). Fall
+    # back to the struct's English `:name` if the locale lookup
+    # doesn't carry this currency.
+    defp localized_currency_name(code, fallback, locale_id) do
+      case Localize.Currency.display_name(code, locale: locale_id) do
+        {:ok, name} -> name
+        {:error, _} -> to_string(fallback.name)
       end
     end
 
@@ -564,7 +575,15 @@ if Code.ensure_loaded?(Phoenix.Component) do
     defp text_align_class(:center), do: "text-center"
     defp text_align_class(:right), do: "text-right"
 
+    # Used by the input's sr-only currency-name span. Prefers the
+    # CLDR display name for the active locale; falls back to the
+    # struct's English `:name` field if the CLDR lookup misses.
     defp currency_name(nil, _locale), do: ""
+
+    defp currency_name(%{code: code, name: fallback}, locale) when not is_nil(code) do
+      localized_currency_name(code, %{name: fallback}, locale)
+    end
+
     defp currency_name(%{name: name}, _locale) when is_binary(name), do: name
     defp currency_name(_, _), do: ""
 
