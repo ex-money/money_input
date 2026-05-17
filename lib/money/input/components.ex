@@ -36,6 +36,34 @@ if Code.ensure_loaded?(Phoenix.Component) and
 
     See `Money.Input` for a full feature overview.
 
+    ## Tolerance of invalid input
+
+    These components sit on the render path and never raise on
+    bad input — the page always renders. Specifically:
+
+    * **Unknown `:locale`** — `assign_money_locale_data/1` and
+      `assign_picker/1` both fall back to a shaped placeholder
+      so downstream attribute reads (`@locale_data.decimal`,
+      `@locale_data.symbol`, etc.) resolve cleanly.
+
+    * **Unknown `:default_currency`** (e.g. `:ZZZ`, `:""`,
+      `nil`) — falls back to the locale's natural currency.
+      Empty strings and the `:""` atom in form-submitted
+      `currency` values are explicitly blacklisted by
+      `normalize_currency_code/1` so they never reach a
+      downstream `Money.Currency` lookup.
+
+    * **Blank or unparseable `value`** — the visible input
+      renders empty; the hidden currency carrier stays at
+      the default. `Money.Input.Cast.cast/2` returns
+      `{:ok, nil}` for blanks and `{:error, _}` for garbage,
+      never raises.
+
+    * **JS hook absent** — both components degrade to plain
+      HTML form inputs. Live formatting and the picker
+      overlay are off; the form still submits a valid
+      `%{"amount", "currency"}` map for `Money.Ecto.Composite.Type`.
+
     """
 
     use Phoenix.Component
