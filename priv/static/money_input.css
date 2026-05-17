@@ -23,6 +23,41 @@
   --mi-font: inherit;
 }
 
+/* Dark-mode defaults. Consumers using a class-based theme
+   toggle (Tailwind's `dark:` etc.) should redeclare these
+   under their own selector — see the README for the
+   override pattern. Honoured automatically when the OS
+   prefers dark and the host page hasn't opted into a
+   specific theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mi-border: #3f3f46;
+    --mi-border-focus: #34d399;
+    --mi-bg: #18181b;
+    --mi-bg-muted: #27272a;
+    --mi-fg: #fafafa;
+    --mi-fg-muted: #a1a1aa;
+    --mi-accent: #10b981;
+    --mi-accent-fg: #052e16;
+    --mi-row-hover: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Explicit dark-theme override for host pages with a
+   class-based toggle (e.g. `<html data-theme="dark">`).
+   Mirrors the OS dark-preference block above. */
+[data-theme="dark"] {
+  --mi-border: #3f3f46;
+  --mi-border-focus: #34d399;
+  --mi-bg: #18181b;
+  --mi-bg-muted: #27272a;
+  --mi-fg: #fafafa;
+  --mi-fg-muted: #a1a1aa;
+  --mi-accent: #10b981;
+  --mi-accent-fg: #052e16;
+  --mi-row-hover: rgba(255, 255, 255, 0.06);
+}
+
 /* ── Wrapper + input ────────────────────────────────────────── */
 
 .money-input-wrapper {

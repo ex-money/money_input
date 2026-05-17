@@ -427,6 +427,8 @@ if Code.ensure_loaded?(Phoenix.Component) and
     defp extract_amount_and_currency(_), do: {nil, nil}
 
     defp normalize_currency_code(nil), do: nil
+    defp normalize_currency_code(:""), do: nil
+    defp normalize_currency_code(""), do: nil
     defp normalize_currency_code(code) when is_atom(code), do: code
 
     defp normalize_currency_code(code) when is_binary(code) do
@@ -436,6 +438,8 @@ if Code.ensure_loaded?(Phoenix.Component) and
         _ -> nil
       end
     end
+
+    defp normalize_currency_code(_), do: nil
 
     defp assign_money_field_names(assigns) do
       field_struct = assigns.form[assigns.field]
@@ -456,11 +460,26 @@ if Code.ensure_loaded?(Phoenix.Component) and
     defp assign_money_locale_data(assigns) do
       locale = assigns[:locale] || Localize.get_locale()
 
-      {:ok, locale_data} =
-        Currency.currency_for_locale(locale,
-          currency: assigns.effective_currency,
-          symbol_kind: assigns.symbol_kind
-        )
+      # Components are render-path code — they MUST NOT raise
+      # on invalid form input. If the caller-supplied
+      # currency isn't recognised (unknown ISO code, empty
+      # picker carrier, etc.), fall back to the locale's
+      # natural currency rather than letting a `MatchError`
+      # bubble up the render stack.
+      locale_data =
+        case Currency.currency_for_locale(locale,
+               currency: assigns.effective_currency,
+               symbol_kind: assigns.symbol_kind
+             ) do
+          {:ok, data} ->
+            data
+
+          {:error, _} ->
+            case Currency.currency_for_locale(locale, symbol_kind: assigns.symbol_kind) do
+              {:ok, data} -> data
+              _ -> %{}
+            end
+        end
 
       assigns
       |> assign(:locale, locale)
@@ -482,7 +501,15 @@ if Code.ensure_loaded?(Phoenix.Component) and
       preferred = assigns.preferred || []
       locale_id = locale_id(assigns.locale)
 
-      {:ok, locale_data} = Currency.currency_for_locale(locale_id)
+      # Tolerate a bogus locale — the picker is render-path
+      # code and must not raise. Fall back to a shaped
+      # placeholder so the downstream `locale_data.locale`
+      # read still resolves.
+      locale_data =
+        case Currency.currency_for_locale(locale_id) do
+          {:ok, data} -> data
+          _ -> %{locale: locale_id}
+        end
 
       preferred_rows =
         preferred

@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.2.1] — 2026-05-17
+
+### Bug Fixes
+
+* `Money.Input.Components.money_input/1` no longer raises when the form submits an empty or unknown currency (e.g. the picker's hidden carrier before any selection). `normalize_currency_code/1` blacklists `""` and `:""`, and `assign_money_locale_data/1` falls back to the locale's natural currency on unknown ISO codes instead of `MatchError`.
+
+* `Money.Input.Components.currency_picker/1` tolerates an unknown locale — `assign_picker/1` now falls back to a placeholder rather than crashing on `{:ok, _} = ...`.
+
+* Dark-mode CSS tokens added — `priv/static/money_input.css` now ships `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]` override blocks so the picker and money input pick up the host page's dark theme instead of staying light-themed.
+
 ## [v0.2.0] — 2026-05-15
 
 * Gettext-backed localization of the picker's UI strings (aria labels, search placeholder, section headers, empty-state). Catalog ships English source plus de, fr, and ja translations. Activated via `Money.Input.Gettext` backend. `:gettext` is now a required dep when the components are used (it was optional in 0.1).
