@@ -72,7 +72,7 @@ defmodule MoneyInput.MixProject do
       groups_for_extras: [
         Guides: ~r/guides\/.*/
       ],
-      formatters: ["html"],
+      formatters: ["html", "markdown"],
       groups_for_modules: groups_for_modules(),
       # External-package references that ex_doc can't follow
       # because the host package isn't in this docs build.
