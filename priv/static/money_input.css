@@ -178,9 +178,12 @@
   flex: 1;
   padding: 0.4rem 0.6rem;
   font: inherit;
+  background: var(--mi-bg-muted);
+  color: var(--mi-fg);
   border: 1px solid var(--mi-border);
   border-radius: var(--mi-radius);
 }
+.currency-picker-search::placeholder { color: var(--mi-fg-muted); }
 .currency-picker-search:focus {
   outline: 2px solid var(--mi-accent);
   outline-offset: -1px;

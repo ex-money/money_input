@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.2.2] — 2026-05-17
+
+### Bug Fixes
+
+* Currency picker's search `<input>` field now picks up the dark theme. The element had no explicit `background`/`color` declarations, so it fell back to the browser-default white/black even when the rest of the picker overlay correctly used the dark `--mi-*` tokens.
+
 ## [v0.2.1] — 2026-05-17
 
 ### Bug Fixes
