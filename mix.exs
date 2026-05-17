@@ -1,7 +1,7 @@
 defmodule MoneyInput.MixProject do
   use Mix.Project
 
-  @version "0.2.2"
+  @version "0.2.3"
   @source_url "https://github.com/ex-money/money_input"
 
   def project do

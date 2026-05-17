@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.2.3] — 2026-05-17
+
+### Bug Fixes
+
+* `Money.Input.Validator.validate_money/2` no longer raises `FunctionClauseError` when called with a non-`%Money{}` value (binary, atom, map, etc.). `check_money_range/3` now has a final catch-all that skips the range check on type mismatch.
+
+* `<.money_input>` no longer raises when `:min` / `:max` is a value Phoenix can't render as iodata — `value_attr/1` rescues `Protocol.UndefinedError` and drops the attribute.
+
+* `<.money_input>` with an unknown `:locale` no longer 500s on downstream `@locale_data.X` reads. The placeholder when both the requested locale AND its fallback fail to resolve is now a shaped `%Money.Input.Currency{}` struct (all fields `nil`) rather than a bare `%{}` — so attribute reads degrade to `nil` and Phoenix omits the attribute.
+
+* `<.currency_picker>` no longer raises on `:preferred` non-list values (`nil`, atom, integer). `assign_picker/1` coerces to `[]` and writes the safe value back to assigns so the template's `Enum.map_join(@preferred, ...)` reads the coerced value.
+
+* Adversarial-input test suite added (`test/adversarial_render_test.exs`) that exercises every public component with a matrix of bad attr values, and an atom-safety guard (`test/atom_safety_test.exs`) that fails the suite if any new `String.to_atom/1` is added to `lib/`.
+
 ## [v0.2.2] — 2026-05-17
 
 ### Bug Fixes

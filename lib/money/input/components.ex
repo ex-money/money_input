@@ -505,7 +505,12 @@ if Code.ensure_loaded?(Phoenix.Component) and
           {:error, _} ->
             case Currency.currency_for_locale(locale, symbol_kind: assigns.symbol_kind) do
               {:ok, data} -> data
-              _ -> %{}
+              # A bare `%{}` would crash downstream
+              # `@locale_data.decimal` etc. reads with
+              # `KeyError`. Return a shaped `%Currency{}`
+              # struct so every read resolves to `nil` and
+              # Phoenix simply omits the attribute.
+              _ -> %Currency{locale: locale}
             end
         end
 
@@ -526,7 +531,10 @@ if Code.ensure_loaded?(Phoenix.Component) and
 
     defp assign_picker(assigns) do
       allowed = assigns.allowed || curated_currencies()
-      preferred = assigns.preferred || []
+      # Coerce non-list `:preferred` to `[]` so downstream
+      # `Enum.map(preferred, ...)` never crashes on a typo'd
+      # attr (`nil`, a bare atom, etc.).
+      preferred = if is_list(assigns.preferred), do: assigns.preferred, else: []
       locale_id = locale_id(assigns.locale)
 
       # Tolerate a bogus locale — the picker is render-path
@@ -578,6 +586,10 @@ if Code.ensure_loaded?(Phoenix.Component) and
       assigns
       |> assign(:sections, sections)
       |> assign(:locale_id, locale_data.locale)
+      # Write back the coerced list so the template's
+      # `@preferred` reads the safe value, not the raw attr.
+      |> assign(:preferred, preferred)
+      |> assign(:allowed, allowed)
       |> assign(:id, id)
       |> assign(:hidden_name, hidden_name)
       |> assign(:hidden_id, hidden_id)
@@ -626,7 +638,19 @@ if Code.ensure_loaded?(Phoenix.Component) and
     defp locale_id(locale), do: locale
 
     defp value_attr(nil), do: nil
-    defp value_attr(value), do: to_string(value)
+
+    defp value_attr(value) do
+      # `to_string/1` raises for maps / tuples / structs
+      # without `String.Chars`. The component is render-path
+      # code so a typo'd attr like `min={%{}}` must NOT crash
+      # the page — drop the attr entirely on un-stringifiable
+      # values.
+      try do
+        to_string(value)
+      rescue
+        Protocol.UndefinedError -> nil
+      end
+    end
 
     defp text_align_class(:left), do: "text-left"
     defp text_align_class(:center), do: "text-center"

@@ -130,6 +130,12 @@ defmodule Money.Input.Validator do
     |> maybe_check_max(value, normalize_money_bound(Keyword.get(options, :max), value))
   end
 
+  # Non-Money input (binary, atom, map, etc.) — skip range
+  # check. The `check_currency` / `check_money_precision`
+  # clauses surface the type mismatch as a validation error;
+  # we don't want range-check to raise on top of that.
+  defp check_money_range(errors, _value, _options), do: errors
+
   defp maybe_check_min(errors, _value, nil), do: errors
 
   defp maybe_check_min(errors, value, min) do
