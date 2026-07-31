@@ -69,13 +69,13 @@ if Code.ensure_loaded?(Phoenix.Component) and
     use Phoenix.Component
     use Localize.Message.Sigils, backend: Money.Input.Gettext
 
-    alias Money.Input.Currency
     alias Money.Input.Components.Flags
+    alias Money.Input.Currency
 
     @doc """
     Locale-aware money input.
 
-    Returns `Money.t/0` on form submission. Renders the currency
+    Returns `t:Money.t/0` on form submission. Renders the currency
     symbol as an adornment outside the input — the user only
     types digits and a decimal separator.
 
@@ -460,11 +460,9 @@ if Code.ensure_loaded?(Phoenix.Component) and
     defp normalize_currency_code(code) when is_atom(code), do: code
 
     defp normalize_currency_code(code) when is_binary(code) do
-      try do
-        String.to_existing_atom(String.upcase(code))
-      rescue
-        _ -> nil
-      end
+      String.to_existing_atom(String.upcase(code))
+    rescue
+      _ -> nil
     end
 
     defp normalize_currency_code(_), do: nil
@@ -537,54 +535,12 @@ if Code.ensure_loaded?(Phoenix.Component) and
       preferred = if is_list(assigns.preferred), do: assigns.preferred, else: []
       locale_id = locale_id(assigns.locale)
 
-      # Tolerate a bogus locale — the picker is render-path
-      # code and must not raise. Fall back to a shaped
-      # placeholder so the downstream `locale_data.locale`
-      # read still resolves.
-      locale_data =
-        case Currency.currency_for_locale(locale_id) do
-          {:ok, data} -> data
-          _ -> %{locale: locale_id}
-        end
-
-      preferred_rows =
-        preferred
-        |> Enum.map(&currency_row(&1, locale_id))
-        |> Enum.reject(&is_nil/1)
-
-      all_rows =
-        allowed
-        |> Enum.reject(&(&1 in preferred))
-        |> Enum.map(&currency_row(&1, locale_id))
-        |> Enum.reject(&is_nil/1)
-        |> Enum.sort_by(& &1.name)
-
-      sections = [
-        {~t"Preferred", preferred_rows},
-        {~t"All currencies", all_rows}
-      ]
-
+      locale_data = picker_locale_data(locale_id)
       id = assigns[:id] || "currency-picker-#{System.unique_integer([:positive])}"
-
-      # The hidden value input is named via three priority levels:
-      # 1) an explicit `name=` attr (used when embedded in money_input
-      #    to inject a nested name like `price[currency]`),
-      # 2) a form+field pair (standalone use),
-      # 3) nothing — the picker is purely client-side state.
-      {hidden_name, hidden_id} =
-        case {assigns[:name], assigns[:form], assigns[:field]} do
-          {explicit, _, _} when is_binary(explicit) ->
-            {explicit, assigns[:input_id] || "#{id}-value"}
-
-          {_, form, field} when not is_nil(form) and not is_nil(field) ->
-            {Phoenix.HTML.Form.input_name(form, field), "#{id}-value"}
-
-          _ ->
-            {nil, nil}
-        end
+      {hidden_name, hidden_id} = picker_hidden(assigns, id)
 
       assigns
-      |> assign(:sections, sections)
+      |> assign(:sections, picker_sections(preferred, allowed, locale_id))
       |> assign(:locale_id, locale_data.locale)
       # Write back the coerced list so the template's
       # `@preferred` reads the safe value, not the raw attr.
@@ -597,6 +553,54 @@ if Code.ensure_loaded?(Phoenix.Component) and
       |> assign_new(:button_class, fn -> nil end)
       |> assign_new(:overlay_class, fn -> nil end)
       |> assign_new(:row_class, fn -> nil end)
+    end
+
+    # Tolerate a bogus locale — the picker is render-path
+    # code and must not raise. Fall back to a shaped
+    # placeholder so the downstream `locale_data.locale`
+    # read still resolves.
+    defp picker_locale_data(locale_id) do
+      case Currency.currency_for_locale(locale_id) do
+        {:ok, data} -> data
+        _ -> %{locale: locale_id}
+      end
+    end
+
+    defp picker_sections(preferred, allowed, locale_id) do
+      preferred_rows =
+        preferred
+        |> Enum.map(&currency_row(&1, locale_id))
+        |> Enum.reject(&is_nil/1)
+
+      all_rows =
+        allowed
+        |> Enum.reject(&(&1 in preferred))
+        |> Enum.map(&currency_row(&1, locale_id))
+        |> Enum.reject(&is_nil/1)
+        |> Enum.sort_by(& &1.name)
+
+      [
+        {~t"Preferred", preferred_rows},
+        {~t"All currencies", all_rows}
+      ]
+    end
+
+    # The hidden value input is named via three priority levels:
+    # 1) an explicit `name=` attr (used when embedded in money_input
+    #    to inject a nested name like `price[currency]`),
+    # 2) a form+field pair (standalone use),
+    # 3) nothing — the picker is purely client-side state.
+    defp picker_hidden(assigns, id) do
+      case {assigns[:name], assigns[:form], assigns[:field]} do
+        {explicit, _, _} when is_binary(explicit) ->
+          {explicit, assigns[:input_id] || "#{id}-value"}
+
+        {_, form, field} when not is_nil(form) and not is_nil(field) ->
+          {Phoenix.HTML.Form.input_name(form, field), "#{id}-value"}
+
+        _ ->
+          {nil, nil}
+      end
     end
 
     defp currency_row(code, locale_id) do
@@ -639,17 +643,15 @@ if Code.ensure_loaded?(Phoenix.Component) and
 
     defp value_attr(nil), do: nil
 
+    # `to_string/1` raises for maps / tuples / structs
+    # without `String.Chars`. The component is render-path
+    # code so a typo'd attr like `min={%{}}` must NOT crash
+    # the page — drop the attr entirely on un-stringifiable
+    # values.
     defp value_attr(value) do
-      # `to_string/1` raises for maps / tuples / structs
-      # without `String.Chars`. The component is render-path
-      # code so a typo'd attr like `min={%{}}` must NOT crash
-      # the page — drop the attr entirely on un-stringifiable
-      # values.
-      try do
-        to_string(value)
-      rescue
-        Protocol.UndefinedError -> nil
-      end
+      to_string(value)
+    rescue
+      Protocol.UndefinedError -> nil
     end
 
     defp text_align_class(:left), do: "text-left"

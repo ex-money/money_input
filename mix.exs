@@ -1,7 +1,7 @@
 defmodule MoneyInput.MixProject do
   use Mix.Project
 
-  @version "0.2.3"
+  @version "0.3.0"
   @source_url "https://github.com/ex-money/money_input"
 
   def project do
@@ -104,13 +104,14 @@ defmodule MoneyInput.MixProject do
 
   defp deps do
     [
-      {:ex_money, "~> 6.0"},
-      {:localize, "~> 0.36"},
+      {:ex_money, "~> 6.2"},
+      {:localize, "~> 1.0"},
       {:phoenix_html, "~> 4.0", optional: true},
       {:phoenix_live_view, "~> 1.0", optional: true},
       {:ecto, "~> 3.10", optional: true},
       {:gettext, "~> 1.0"},
       {:ex_doc, "~> 0.30", only: [:dev, :release], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false}
     ] ++ maybe_json_polyfill()
   end

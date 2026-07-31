@@ -11,7 +11,7 @@ For a full end-to-end Phoenix integration walkthrough — Elixir deps, JS deps, 
 ```elixir
 def deps do
   [
-    {:ex_money_input, "~> 0.2"},
+    {:ex_money_input, "~> 0.3"},
 
     # Components and changeset bridge:
     {:phoenix_html, "~> 4.0"},

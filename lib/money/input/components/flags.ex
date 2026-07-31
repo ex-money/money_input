@@ -180,11 +180,9 @@ defmodule Money.Input.Components.Flags do
   end
 
   def flag_for(code) when is_binary(code) do
-    try do
-      flag_for(String.to_existing_atom(code))
-    rescue
-      ArgumentError -> "🏳"
-    end
+    flag_for(String.to_existing_atom(code))
+  rescue
+    ArgumentError -> "🏳"
   end
 
   @doc "Returns a primary country/territory name for a currency code."

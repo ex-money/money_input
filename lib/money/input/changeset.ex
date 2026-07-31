@@ -7,7 +7,7 @@ if Code.ensure_loaded?(Ecto.Changeset) do
     in order:
 
     * `cast_money/3` — converts a `%{"amount" => ..., "currency"
-      => ...}` form submission into a `Money.t/0` change. Wraps
+      => ...}` form submission into a `t:Money.t/0` change. Wraps
       `Money.Input.Cast.cast/2`.
 
     * `validate_money/3` — applies business rules (bounds,
@@ -36,7 +36,7 @@ if Code.ensure_loaded?(Ecto.Changeset) do
 
     @doc """
     Casts a nested `%{"amount" => ..., "currency" => ...}` form
-    submission into a `Money.t/0` and puts it on the changeset.
+    submission into a `t:Money.t/0` and puts it on the changeset.
 
     Use this when the field is **not** typed as
     `Money.Ecto.Composite.Type` (which casts the same map shape
@@ -62,7 +62,7 @@ if Code.ensure_loaded?(Ecto.Changeset) do
 
     ### Returns
 
-    * The changeset with a `Money.t/0` change put on `field`, or
+    * The changeset with a `t:Money.t/0` change put on `field`, or
       with an error added if the amount/currency can't be parsed.
 
     """
@@ -83,7 +83,7 @@ if Code.ensure_loaded?(Ecto.Changeset) do
     end
 
     @doc """
-    Validates a `Money.t/0` field with the rules from
+    Validates a `t:Money.t/0` field with the rules from
     `Money.Input.Validator.validate_money/2`.
 
     ### Arguments

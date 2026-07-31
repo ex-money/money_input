@@ -1,6 +1,6 @@
 defmodule Money.Input.Validator do
   @moduledoc """
-  Business-rule validation for `Money.t/0` values.
+  Business-rule validation for `t:Money.t/0` values.
 
   ## Why this is separate from `Money.Input.Cast`
 
@@ -24,12 +24,12 @@ defmodule Money.Input.Validator do
   alias Money.Input.ValidationError
 
   @doc """
-  Validates a `Money.t/0` against bounds, precision, and
+  Validates a `t:Money.t/0` against bounds, precision, and
   required-ness.
 
   ### Arguments
 
-  * `value` is a `Money.t/0` or `nil`.
+  * `value` is a `t:Money.t/0` or `nil`.
 
   * `options` is a keyword list of options.
 
@@ -37,7 +37,7 @@ defmodule Money.Input.Validator do
 
   * `:required` — when `true`, `nil` is rejected.
 
-  * `:min` — minimum allowed value. A `Money.t/0`, or any value
+  * `:min` — minimum allowed value. A `t:Money.t/0`, or any value
     `Money.new/2` accepts (e.g. a `Decimal` or string) — when
     the latter, the bound takes the value's currency.
 

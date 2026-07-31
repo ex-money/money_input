@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.3.0] — 2026-07-31
+
+### Changed
+
+* Requires `localize ~> 1.0` and `ex_money ~> 6.2`. The previous requirements excluded Localize 1.0.
+
 ## [v0.2.3] — 2026-05-17
 
 ### Bug Fixes

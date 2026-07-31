@@ -1,6 +1,6 @@
 defmodule Money.Input.Cast do
   @moduledoc """
-  Casts a form-submission shape into a `Money.t/0`.
+  Casts a form-submission shape into a `t:Money.t/0`.
 
   `cast/2` consumes the four shapes a user-input pipeline can
   produce:
@@ -8,7 +8,7 @@ defmodule Money.Input.Cast do
   * `nil` and blank-amount maps return `{:ok, nil}` — the field
     wasn't filled in.
 
-  * `Money.t/0` round-trips unchanged.
+  * `t:Money.t/0` round-trips unchanged.
 
   * `%{"amount", "currency"}` (or `%{amount, currency}`) — the
     nested form-submission shape that `<.money_input>` produces
@@ -36,7 +36,7 @@ defmodule Money.Input.Cast do
           | %{required(String.t() | atom()) => term()}
 
   @doc """
-  Casts a form-submission value to a `Money.t/0`.
+  Casts a form-submission value to a `t:Money.t/0`.
 
   ### Arguments
 
@@ -143,11 +143,18 @@ defmodule Money.Input.Cast do
     |> normalise_money_result()
   end
 
-  # `Money.parse/2` and `Money.new/3` both return their errors as
+  # `Money.parse/2` and `Money.new/3` return their own errors as
   # `{module, message}` tuples — Money's legacy convention. Lift
   # them into proper exception structs at this library's
   # boundary so the public API exposes one consistent shape.
+  #
+  # Errors raised from Localize (an invalid `:locale`, say) already
+  # arrive as exception structs under Localize 1.0, so those pass
+  # straight through.
   defp normalise_money_result(%Money{} = money), do: {:ok, money}
+
+  defp normalise_money_result({:error, %{__exception__: true} = exception}),
+    do: {:error, exception}
 
   defp normalise_money_result({:error, {module, message}}) when is_atom(module),
     do: {:error, module.exception(message)}

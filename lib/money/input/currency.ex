@@ -230,10 +230,7 @@ defmodule Money.Input.Currency do
   end
 
   defp position_in_pattern(pattern) do
-    cond do
-      currency_position(pattern) <= digit_position(pattern) -> :prefix
-      true -> :suffix
-    end
+    if currency_position(pattern) <= digit_position(pattern), do: :prefix, else: :suffix
   end
 
   defp currency_position(pattern) do

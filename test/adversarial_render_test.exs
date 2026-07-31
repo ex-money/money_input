@@ -8,7 +8,7 @@ defmodule Money.Input.AdversarialRenderTest do
   necessarily validate ahead of time.
   """
 
-  alias Money.Input.{Components, Cast, Validator}
+  alias Money.Input.{Cast, Components, Validator}
 
   @bad_atoms [nil, :"", :unknown, :__bad__]
   @bad_strings [nil, "", "garbage", "🙂", String.duplicate("a", 1000)]
@@ -232,26 +232,22 @@ defmodule Money.Input.AdversarialRenderTest do
   end
 
   defp assert_no_raise(fun, context: ctx) do
-    try do
-      fun.()
-    rescue
-      e ->
-        flunk("""
-        Component raised an exception under #{ctx}:
+    fun.()
+  rescue
+    e ->
+      flunk("""
+      Component raised an exception under #{ctx}:
 
-          #{Exception.format(:error, e, [])}
-        """)
-    end
+        #{Exception.format(:error, e, [])}
+      """)
   end
 
   defp to_string_safe(nil), do: ""
   defp to_string_safe(:""), do: ""
 
   defp to_string_safe(value) do
-    try do
-      to_string(value)
-    rescue
-      _ -> inspect(value)
-    end
+    to_string(value)
+  rescue
+    _ -> inspect(value)
   end
 end
