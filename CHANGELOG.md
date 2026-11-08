@@ -6,6 +6,10 @@
 
 * The amount input carries a `data-amount` attribute with the plain decimal amount (`"1234.56"`), which the `MoneyInput` hook uses to start and resync AutoNumeric.
 
+### Changed
+
+* `<.money_input>` and `<.currency_picker>` validate `:locale` once into a `Localize.LanguageTag` and accept a string, atom or tag. An invalid locale renders without a `data-locale` attribute instead of echoing it.
+
 ### Fixed
 
 * The `MoneyInput` hook resyncs AutoNumeric after every LiveView update, so the amount no longer disappears or reverts to an old value when the pointer leaves the field. Fixes [#2](https://github.com/ex-money/money_input/issues/2).

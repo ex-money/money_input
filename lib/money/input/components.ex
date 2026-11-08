@@ -41,10 +41,12 @@ if Code.ensure_loaded?(Phoenix.Component) and
     These components sit on the render path and never raise on
     bad input — the page always renders. Specifically:
 
-    * **Unknown `:locale`** — `assign_money_locale_data/1` and
-      `assign_picker/1` both fall back to a shaped placeholder
-      so downstream attribute reads (`@locale_data.decimal`,
-      `@locale_data.symbol`, etc.) resolve cleanly.
+    * **Unknown `:locale`** — each component validates `:locale`
+      once with `Localize.validate_locale/1` and works from the
+      resulting `t:Localize.LanguageTag.t/0`. An invalid locale
+      renders without locale data: no `data-locale` or separator
+      attributes, a blank amount, and the currencies' English
+      names in the picker.
 
     * **Unknown `:default_currency`** (e.g. `:ZZZ`, `:""`,
       `nil`) — falls back to the locale's natural currency.
@@ -108,7 +110,12 @@ if Code.ensure_loaded?(Phoenix.Component) and
     attr(:form, Phoenix.HTML.Form, required: true)
     attr(:field, :atom, required: true)
     attr(:value, :any, default: nil)
-    attr(:locale, :string, default: nil)
+
+    attr(:locale, :any,
+      default: nil,
+      doc:
+        "A locale string, atom or `Localize.LanguageTag`. Defaults to the current locale (`Localize.get_locale/0`)."
+    )
 
     attr(:default_currency, :atom,
       default: nil,
@@ -165,7 +172,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
           symbol_class={@symbol_class}
           currency_picker={@currency_picker}
           currency={@effective_currency}
-          locale={@locale_data.locale}
+          locale={@language_tag || @locale}
           allowed_currencies={@allowed_currencies}
           preferred_currencies={@preferred_currencies}
           currency_name={@currency_name}
@@ -204,7 +211,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
           symbol_class={@symbol_class}
           currency_picker={@currency_picker}
           currency={@effective_currency}
-          locale={@locale_data.locale}
+          locale={@language_tag || @locale}
           allowed_currencies={@allowed_currencies}
           preferred_currencies={@preferred_currencies}
           currency_name={@currency_name}
@@ -212,7 +219,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
           id={"#{@amount_id}-symbol"}
         />
         <span id={"#{@amount_id}-currency-name"} class="sr-only">
-          {currency_name(@locale_data.currency, @locale_data.locale)}
+          {currency_name(@locale_data.currency, @language_tag)}
         </span>
       </div>
       """
@@ -288,7 +295,13 @@ if Code.ensure_loaded?(Phoenix.Component) and
     attr(:allowed, :list, default: nil)
     attr(:preferred, :list, default: [])
     attr(:recents_limit, :integer, default: 5)
-    attr(:locale, :any, default: nil)
+
+    attr(:locale, :any,
+      default: nil,
+      doc:
+        "A locale string, atom or `Localize.LanguageTag`. Defaults to the current locale (`Localize.get_locale/0`)."
+    )
+
     attr(:variant, :atom, default: :auto, values: [:auto, :dropdown, :sheet])
     attr(:id, :string, default: nil)
     attr(:class, :string, default: nil)
@@ -387,12 +400,29 @@ if Code.ensure_loaded?(Phoenix.Component) and
 
     # ── Internal: shared assigns ──────────────────────────────
 
-    # Resolve the locale once, before anything formats with it.
-    # The input's value and its `data-decimal` / `data-group`
-    # attributes must come from the same locale, or the JS hook
-    # reads the number with the wrong separators.
+    # Validate the locale once, before anything formats with it,
+    # and work from the tag from then on. The input's value and
+    # its `data-decimal` / `data-group` attributes must come from
+    # the same locale, or the JS hook reads the number with the
+    # wrong separators. `:locale` keeps the caller's value.
     defp assign_money_locale(assigns) do
-      assign(assigns, :locale, assigns.locale || Localize.get_locale())
+      assign(assigns, :language_tag, validated_locale(assigns.locale))
+    end
+
+    # The one place a caller-supplied locale is validated. `nil`
+    # means the current locale, which is already a validated tag
+    # (`Localize.validate_locale(nil)` would mean `en`). An
+    # invalid locale becomes `nil`, and the components render
+    # without locale data rather than raising.
+    defp validated_locale(nil) do
+      Localize.get_locale()
+    end
+
+    defp validated_locale(locale) do
+      case Localize.validate_locale(locale) do
+        {:ok, language_tag} -> language_tag
+        {:error, _} -> nil
+      end
     end
 
     defp assign_money_value(assigns) do
@@ -403,7 +433,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
       {amount, currency_from_value} = extract_amount_and_currency(raw)
       effective_currency = currency_from_value || assigns.default_currency
 
-      {formatted, canonical} = format_amount(amount, effective_currency, assigns.locale)
+      {formatted, canonical} = format_amount(amount, effective_currency, assigns.language_tag)
 
       assigns
       |> assign(:formatted_value, formatted)
@@ -445,15 +475,19 @@ if Code.ensure_loaded?(Phoenix.Component) and
       {"", nil}
     end
 
-    defp format_amount(amount, currency, locale) do
-      case Money.new(currency, amount, locale: locale) do
-        %Money{} = money -> format_money(money, locale)
+    defp format_amount(_amount, _currency, nil) do
+      {"", nil}
+    end
+
+    defp format_amount(amount, currency, language_tag) do
+      case Money.new(currency, amount, locale: language_tag) do
+        %Money{} = money -> format_money(money, language_tag)
         {:error, _} -> {"", nil}
       end
     end
 
-    defp format_money(money, locale) do
-      case Money.to_string(money, locale: locale, currency_symbol: :none) do
+    defp format_money(money, language_tag) do
+      case Money.to_string(money, locale: language_tag, currency_symbol: :none) do
         {:ok, formatted} -> {formatted, Decimal.to_string(money.amount, :normal)}
         {:error, _} -> {"", nil}
       end
@@ -515,35 +549,48 @@ if Code.ensure_loaded?(Phoenix.Component) and
     end
 
     defp assign_money_locale_data(assigns) do
-      locale = assigns.locale
-
-      # Components are render-path code — they MUST NOT raise
-      # on invalid form input. If the caller-supplied
-      # currency isn't recognised (unknown ISO code, empty
-      # picker carrier, etc.), fall back to the locale's
-      # natural currency rather than letting a `MatchError`
-      # bubble up the render stack.
       locale_data =
-        case Currency.currency_for_locale(locale,
-               currency: assigns.effective_currency,
-               symbol_kind: assigns.symbol_kind
-             ) do
-          {:ok, data} ->
-            data
-
-          {:error, _} ->
-            case Currency.currency_for_locale(locale, symbol_kind: assigns.symbol_kind) do
-              {:ok, data} -> data
-              # A bare `%{}` would crash downstream
-              # `@locale_data.decimal` etc. reads with
-              # `KeyError`. Return a shaped `%Currency{}`
-              # struct so every read resolves to `nil` and
-              # Phoenix simply omits the attribute.
-              _ -> %Currency{locale: locale}
-            end
-        end
+        money_locale_data(
+          assigns.language_tag,
+          assigns.effective_currency,
+          assigns.symbol_kind
+        )
 
       assign(assigns, :locale_data, locale_data)
+    end
+
+    # Components are render-path code — they MUST NOT raise on
+    # invalid input. An invalid locale (`nil` tag) has no locale
+    # data. If the caller-supplied currency isn't recognised
+    # (unknown ISO code, empty picker carrier, etc.), fall back
+    # to the locale's natural currency.
+    #
+    # The last resort is a shaped `%Currency{}` rather than a
+    # bare `%{}`, which would crash `@locale_data.decimal` reads
+    # with `KeyError`: every read resolves to `nil` and Phoenix
+    # omits the attribute.
+    defp money_locale_data(nil, _currency, _symbol_kind) do
+      %Currency{}
+    end
+
+    defp money_locale_data(language_tag, currency, symbol_kind) do
+      case Currency.currency_for_locale(language_tag,
+             currency: currency,
+             symbol_kind: symbol_kind
+           ) do
+        {:ok, data} -> data
+        {:error, _} -> natural_currency_data(language_tag, symbol_kind)
+      end
+    end
+
+    defp natural_currency_data(language_tag, symbol_kind) do
+      case Currency.currency_for_locale(language_tag, symbol_kind: symbol_kind) do
+        {:ok, data} ->
+          data
+
+        {:error, _} ->
+          %Currency{locale: language_tag.cldr_locale_id, language_tag: language_tag}
+      end
     end
 
     defp assign_symbol_position(assigns) do
@@ -562,15 +609,14 @@ if Code.ensure_loaded?(Phoenix.Component) and
       # `Enum.map(preferred, ...)` never crashes on a typo'd
       # attr (`nil`, a bare atom, etc.).
       preferred = if is_list(assigns.preferred), do: assigns.preferred, else: []
-      locale_id = locale_id(assigns.locale)
+      language_tag = validated_locale(assigns.locale)
 
-      locale_data = picker_locale_data(locale_id)
       id = assigns[:id] || "currency-picker-#{System.unique_integer([:positive])}"
       {hidden_name, hidden_id} = picker_hidden(assigns, id)
 
       assigns
-      |> assign(:sections, picker_sections(preferred, allowed, locale_id))
-      |> assign(:locale_id, locale_data.locale)
+      |> assign(:sections, picker_sections(preferred, allowed, language_tag))
+      |> assign(:locale_id, cldr_locale_id(language_tag))
       # Write back the coerced list so the template's
       # `@preferred` reads the safe value, not the raw attr.
       |> assign(:preferred, preferred)
@@ -584,27 +630,25 @@ if Code.ensure_loaded?(Phoenix.Component) and
       |> assign_new(:row_class, fn -> nil end)
     end
 
-    # Tolerate a bogus locale — the picker is render-path
-    # code and must not raise. Fall back to a shaped
-    # placeholder so the downstream `locale_data.locale`
-    # read still resolves.
-    defp picker_locale_data(locale_id) do
-      case Currency.currency_for_locale(locale_id) do
-        {:ok, data} -> data
-        _ -> %{locale: locale_id}
-      end
+    # An invalid locale (`nil` tag) renders no `data-locale`.
+    defp cldr_locale_id(nil) do
+      nil
     end
 
-    defp picker_sections(preferred, allowed, locale_id) do
+    defp cldr_locale_id(%Localize.LanguageTag{cldr_locale_id: cldr_locale_id}) do
+      cldr_locale_id
+    end
+
+    defp picker_sections(preferred, allowed, language_tag) do
       preferred_rows =
         preferred
-        |> Enum.map(&currency_row(&1, locale_id))
+        |> Enum.map(&currency_row(&1, language_tag))
         |> Enum.reject(&is_nil/1)
 
       all_rows =
         allowed
         |> Enum.reject(&(&1 in preferred))
-        |> Enum.map(&currency_row(&1, locale_id))
+        |> Enum.map(&currency_row(&1, language_tag))
         |> Enum.reject(&is_nil/1)
         |> Enum.sort_by(& &1.name)
 
@@ -632,12 +676,12 @@ if Code.ensure_loaded?(Phoenix.Component) and
       end
     end
 
-    defp currency_row(code, locale_id) do
+    defp currency_row(code, language_tag) do
       case Money.Currency.currency_for_code(code) do
         {:ok, currency} ->
           %{
             code: to_string(code),
-            name: localized_currency_name(code, currency, locale_id),
+            name: localized_currency_name(code, currency, language_tag),
             country: Flags.country_for(code) || "",
             symbol: currency.symbol,
             flag: flag_for(code),
@@ -652,9 +696,14 @@ if Code.ensure_loaded?(Phoenix.Component) and
     # CLDR display names for currencies vary by locale (e.g. "Euro"
     # in en, "Euro" in de, "ユーロ" in ja, "يورو" in ar). Fall
     # back to the struct's English `:name` if the locale lookup
-    # doesn't carry this currency.
-    defp localized_currency_name(code, fallback, locale_id) do
-      case Localize.Currency.display_name(code, locale: locale_id) do
+    # doesn't carry this currency, or the locale is invalid
+    # (`nil` tag).
+    defp localized_currency_name(_code, fallback, nil) do
+      to_string(fallback.name)
+    end
+
+    defp localized_currency_name(code, fallback, language_tag) do
+      case Localize.Currency.display_name(code, locale: language_tag) do
         {:ok, name} -> name
         {:error, _} -> to_string(fallback.name)
       end
@@ -666,9 +715,6 @@ if Code.ensure_loaded?(Phoenix.Component) and
          MYR VND TWD UAH ARS COP PEN CLP PKR BDT NGN KES KZT MAD CHF BHD KWD)a
       |> Enum.uniq()
     end
-
-    defp locale_id(nil), do: Localize.get_locale()
-    defp locale_id(locale), do: locale
 
     defp value_attr(nil), do: nil
 
@@ -690,14 +736,21 @@ if Code.ensure_loaded?(Phoenix.Component) and
     # Used by the input's sr-only currency-name span. Prefers the
     # CLDR display name for the active locale; falls back to the
     # struct's English `:name` field if the CLDR lookup misses.
-    defp currency_name(nil, _locale), do: ""
-
-    defp currency_name(%{code: code, name: fallback}, locale) when not is_nil(code) do
-      localized_currency_name(code, %{name: fallback}, locale)
+    defp currency_name(nil, _language_tag) do
+      ""
     end
 
-    defp currency_name(%{name: name}, _locale) when is_binary(name), do: name
-    defp currency_name(_, _), do: ""
+    defp currency_name(%{code: code, name: fallback}, language_tag) when not is_nil(code) do
+      localized_currency_name(code, %{name: fallback}, language_tag)
+    end
+
+    defp currency_name(%{name: name}, _language_tag) when is_binary(name) do
+      name
+    end
+
+    defp currency_name(_currency, _language_tag) do
+      ""
+    end
 
     defp flag_for(code) when is_atom(code), do: Flags.flag_for(code)
     defp flag_for(_), do: "🏳"

@@ -181,6 +181,83 @@ defmodule Money.Input.ComponentsTest do
     end
   end
 
+  describe "locale handling" do
+    test "money_input/1 accepts a string, atom, tag or nil locale" do
+      {:ok, language_tag} = Localize.validate_locale("de")
+      {:ok, _} = Localize.put_locale("de")
+
+      for locale <- ["de", :de, language_tag, nil] do
+        html =
+          render_component(&Components.money_input/1, %{
+            form: money_form(Money.new(:EUR, Decimal.new("1234.56"))),
+            field: :price,
+            locale: locale
+          })
+
+        context = "locale=#{inspect(locale)}"
+        assert html =~ ~s(data-locale="de"), context
+        assert html =~ ~s(data-decimal=","), context
+        assert amount_input(html) =~ ~s(value="1.234,56"), context
+      end
+    end
+
+    test "currency_picker/1 accepts a string, atom, tag or nil locale" do
+      {:ok, language_tag} = Localize.validate_locale("de")
+      {:ok, _} = Localize.put_locale("de")
+
+      for locale <- ["de", :de, language_tag, nil] do
+        html =
+          render_component(&Components.currency_picker/1, %{
+            current: :USD,
+            preferred: [:USD],
+            locale: locale
+          })
+
+        context = "locale=#{inspect(locale)}"
+        assert html =~ ~s(data-locale="de"), context
+        assert html =~ "US-Dollar", context
+      end
+    end
+
+    test "the embedded picker uses the input's locale" do
+      html =
+        render_component(&Components.money_input/1, %{
+          form: money_form(Money.new(:USD, Decimal.new("10"))),
+          field: :price,
+          locale: "de",
+          currency_picker: true,
+          preferred_currencies: [:USD]
+        })
+
+      assert html =~ ~r/data-currency-picker[^>]*data-locale="de"/
+      assert html =~ "US-Dollar"
+    end
+
+    test "an invalid locale renders without locale data" do
+      input_html =
+        render_component(&Components.money_input/1, %{
+          form: money_form(Money.new(:USD, Decimal.new("1234.56"))),
+          field: :price,
+          locale: "garbage"
+        })
+
+      refute input_html =~ "data-locale"
+      refute input_html =~ "data-decimal"
+      assert amount_input(input_html) =~ ~s(value="")
+      refute amount_input(input_html) =~ "data-amount"
+
+      picker_html =
+        render_component(&Components.currency_picker/1, %{
+          current: :USD,
+          preferred: [:USD],
+          locale: "garbage"
+        })
+
+      refute picker_html =~ "data-locale"
+      assert picker_html =~ "US Dollar"
+    end
+  end
+
   describe "currency_picker/1" do
     test "renders trigger, search input, and the listbox" do
       html =
