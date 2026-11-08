@@ -81,7 +81,7 @@ In `assets/js/app.js`:
 
 ```javascript
 import AutoNumeric from "autonumeric"
-import Hooks from "../../deps/ex_money_input/priv/static/money_input.js"
+import Hooks from "ex_money_input"
 
 Hooks.configure({ AutoNumeric })
 
@@ -89,6 +89,8 @@ let liveSocket = new LiveSocket("/live", Socket, {
   hooks: { ...Hooks }
 })
 ```
+
+`"ex_money_input"` resolves because Phoenix's generated esbuild config puts `deps` on `NODE_PATH`, as it does for `"phoenix_html"`. If your build doesn't, import `"../../deps/ex_money_input/priv/static/money_input.js"` instead.
 
 And in your CSS:
 

@@ -1,0 +1,29 @@
+{
+  "name": "ex_money_input",
+  "version": "0.3.1",
+  "description": "Phoenix LiveView hooks for Money.Input: AutoNumeric-backed live money formatting and a searchable currency picker.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "module": "./priv/static/money_input.js",
+  "main": "./priv/static/money_input.js",
+  "style": "./priv/static/money_input.css",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ex-money/money_input.git"
+  },
+  "peerDependencies": {
+    "autonumeric": "^4.10.0"
+  },
+  "peerDependenciesMeta": {
+    "autonumeric": {
+      "optional": true
+    }
+  },
+  "files": [
+    "README.md",
+    "LICENSE.md",
+    "package.json",
+    "priv/static/money_input.js",
+    "priv/static/money_input.css"
+  ]
+}

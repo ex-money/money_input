@@ -1,6 +1,7 @@
 defmodule MoneyInput.MixProject do
   use Mix.Project
 
+  # Also change the version in package.json
   @version "0.3.1"
   @source_url "https://github.com/ex-money/money_input"
 
@@ -46,7 +47,7 @@ defmodule MoneyInput.MixProject do
       maintainers: ["Kip Cole"],
       licenses: ["Apache-2.0"],
       links: links(),
-      files: ~w(lib priv guides mix.exs README.md CHANGELOG.md LICENSE.md)
+      files: ~w(lib priv guides mix.exs package.json README.md CHANGELOG.md LICENSE.md)
     ]
   end
 

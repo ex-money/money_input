@@ -73,7 +73,7 @@ In `assets/js/app.js`:
 import {Socket}    from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import AutoNumeric from "autonumeric"
-import MoneyHooks  from "../../deps/ex_money_input/priv/static/money_input.js"
+import MoneyHooks  from "ex_money_input"
 
 // Tell the hooks where to find AutoNumeric. If you skip this
 // the hooks degrade to the Path A baseline (no live formatting).
@@ -92,7 +92,13 @@ liveSocket.connect()
 window.liveSocket = liveSocket
 ```
 
-The hooks ship as an ES module inside the Hex package, at `deps/ex_money_input/priv/static/money_input.js`; they are not published to npm, so import them by path. Import the file from `deps` rather than copying it into your app, so it stays in step with the components: the hook reads attributes the matching component version renders.
+The hooks ship as an ES module inside the Hex package, with a `package.json` that names it `ex_money_input`; they are not published to npm. Phoenix's generated esbuild config puts `deps` on `NODE_PATH`, so `"ex_money_input"` resolves the same way `"phoenix_html"` does. If your build doesn't set `NODE_PATH`, import the file by path instead:
+
+```javascript
+import MoneyHooks from "../../deps/ex_money_input/priv/static/money_input.js"
+```
+
+Either way, import the hooks from `deps` rather than copying the file into your app, so it stays in step with the components: the hook reads attributes the matching component version renders.
 
 ---
 

@@ -6,6 +6,8 @@
 
 * The amount input carries a `data-amount` attribute with the plain decimal amount (`"1234.56"`), which the `MoneyInput` hook uses to start and resync AutoNumeric.
 
+* A `package.json`, so the hooks import as `"ex_money_input"` wherever `deps` is on esbuild's `NODE_PATH`, as in Phoenix's generated config.
+
 ### Changed
 
 * `<.money_input>` and `<.currency_picker>` validate `:locale` once into a `Localize.LanguageTag` and accept a string, atom or tag. An invalid locale renders without a `data-locale` attribute instead of echoing it.
@@ -20,7 +22,7 @@
 
 * `<.money_input>` with an invalid `:locale` and an amount to format no longer raises `Localize.InvalidLocaleError`.
 
-* The README, guides and moduledoc import the hooks and stylesheet from `deps/ex_money_input/priv/static/`. The documented `"money_input"` import and `deps/money_input` paths did not resolve.
+* The documented `"money_input"` import and `deps/money_input` paths did not resolve. The README, guides and moduledoc now import `"ex_money_input"` and load the stylesheet from `deps/ex_money_input/priv/static/`.
 
 ## [v0.3.0] — 2026-07-31
 
