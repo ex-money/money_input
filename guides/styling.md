@@ -10,14 +10,14 @@ The baseline stylesheet at `priv/static/money_input.css` is opt-in. You can impo
 
 `money_input` ships one stylesheet:
 
-```
+```text
 priv/static/money_input.css
 ```
 
 Pull it into your `assets/app.css`:
 
 ```css
-@import "../../deps/money_input/priv/static/money_input.css";
+@import "../../deps/ex_money_input/priv/static/money_input.css";
 ```
 
 …or copy it into your own assets and treat it as a starting point.
@@ -67,7 +67,7 @@ Tokens are read at paint time, so a theme toggle that flips a `data-theme="dark"
 ## 3. `<.money_input>` DOM and classes
 
 ```heex
-<.money_input form={@form} field={:price} currency={:USD} />
+<.money_input form={@form} field={:price} default_currency={:USD} />
 ```
 
 renders as (prefix-symbol locales, e.g. `en`):
@@ -76,24 +76,27 @@ renders as (prefix-symbol locales, e.g. `en`):
 <div class="money-input-wrapper money-input-money"
      data-money-input="money"
      data-locale="en" data-currency="USD"
-     data-decimal="." data-group="," data-minus="-"
-     data-number-system="latn" data-iso-digits="2"
+     data-decimal="." data-group=","
+     data-number-system="latn" data-minus="-"
+     data-iso-digits="2"
      data-symbol-position="prefix"
-     data-min="" data-max=""
      phx-hook="MoneyInput"
-     id="form_price-wrapper">
+     id="form_price_amount-wrapper">
   <span class="money-input-symbol" aria-hidden="true">$</span>
   <input type="text"
          inputmode="decimal"
-         name="form[price][amount]" id="form_price"
+         name="form[price][amount]" id="form_price_amount"
          value="1,234.50"
-         class="money-input-field text-left"
+         data-amount="1234.50"
+         class="money-input-field text-right"
          autocomplete="off" dir="ltr"
-         aria-describedby="form_price-currency-name">
-  <input type="hidden" name="form[price][currency]" value="USD">
-  <span id="form_price-currency-name" class="sr-only">US Dollar</span>
+         aria-describedby="form_price_amount-currency-name">
+  <input type="hidden" name="form[price][currency]" id="form_price_currency" value="USD">
+  <span id="form_price_amount-currency-name" class="sr-only">US Dollar</span>
 </div>
 ```
+
+`data-min` and `data-max` appear on the wrapper when `:min` and `:max` are set.
 
 For suffix-symbol locales (e.g. `fr`, `de`), the `<span class="money-input-symbol">` appears after the input. The CSS handles the border-side flip — see §6.
 
@@ -120,6 +123,8 @@ Data attributes for state-driven styling:
 * `data-symbol-position="prefix" | "suffix"` — locale-derived. Useful if you want to flip padding asymmetrically by symbol side.
 
 * `data-decimal` / `data-group` / `data-minus` / `data-number-system` / `data-iso-digits` — locale parameters the JS hook reads. Also handy if your stylesheet wants to render the decimal separator next to the input.
+
+* `data-amount` — on the `<input>`: the plain decimal amount (`"1234.50"`) the JS hook starts AutoNumeric from. Absent when the field is empty.
 
 Focus ring: `.money-input-wrapper:focus-within` paints the border + outline. If you replace the rule, use `:focus-within` (not `:focus`) so the visual ring reacts to focus on the *child* input.
 
@@ -277,7 +282,7 @@ The actual position is exposed via the wrapper's `data-symbol-position="prefix" 
 The cheapest integration. Import `money_input.css`, redeclare the `--mi-*` tokens to match your palette, done:
 
 ```css
-@import "../../deps/money_input/priv/static/money_input.css";
+@import "../../deps/ex_money_input/priv/static/money_input.css";
 
 :root {
   --mi-border: theme("colors.zinc.300");
@@ -340,7 +345,7 @@ The structural styles assume `box-sizing: border-box` is in effect (the modern d
 
 ## 11. Quick reference: every public class name
 
-```
+```text
 money-input-wrapper
 money-input-money
 money-input-field
@@ -369,10 +374,11 @@ currency-picker-empty
 
 And every data attribute used as a styling/scripting hook:
 
-```
+```text
 data-money-input="money"              (on .money-input-wrapper)
 data-currency="..."                   (on .money-input-wrapper)
 data-symbol-position="prefix|suffix"  (on .money-input-wrapper)
+data-amount="..."                     (on .money-input-field)
 data-currency-picker                  (on .currency-picker)
 data-currency-picker-trigger          (on .currency-picker-trigger)
 data-currency-picker-overlay          (on .currency-picker-overlay)

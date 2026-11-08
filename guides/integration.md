@@ -73,7 +73,7 @@ In `assets/js/app.js`:
 import {Socket}    from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import AutoNumeric from "autonumeric"
-import MoneyHooks  from "money_input"
+import MoneyHooks  from "../../deps/ex_money_input/priv/static/money_input.js"
 
 // Tell the hooks where to find AutoNumeric. If you skip this
 // the hooks degrade to the Path A baseline (no live formatting).
@@ -92,13 +92,7 @@ liveSocket.connect()
 window.liveSocket = liveSocket
 ```
 
-The `money_input` package ships ESM. Most projects already have
-`esbuild` configured to pull `node_modules` resolution — if yours
-doesn't, point esbuild at the file path:
-
-```javascript
-import MoneyHooks from "../../deps/money_input/priv/static/money_input.js"
-```
+The hooks ship as an ES module inside the Hex package, at `deps/ex_money_input/priv/static/money_input.js`; they are not published to npm, so import them by path. Import the file from `deps` rather than copying it into your app, so it stays in step with the components: the hook reads attributes the matching component version renders.
 
 ---
 
@@ -109,7 +103,7 @@ The components ship a small CSS file with sensible defaults
 `assets/css/app.css`:
 
 ```css
-@import "../../deps/money_input/priv/static/money_input.css";
+@import "../../deps/ex_money_input/priv/static/money_input.css";
 ```
 
 The file defines `--mi-border`, `--mi-accent`, `--mi-radius` etc.
@@ -244,7 +238,7 @@ end
 The `<.money_input>` field always submits **two nested keys**,
 regardless of whether the picker is on:
 
-```
+```elixir
 params["product"] = %{
   "price" => %{
     "amount"   => "1.234,56",   # locale-formatted as the user typed

@@ -4,6 +4,7 @@ defmodule Money.InputTest do
   doctest Money.Input.Cast
   doctest Money.Input.Validator
   doctest Money.Input.Currency
+  doctest Money.Input.Changeset
 
   describe "Cast.cast/2" do
     test "casts a nested form map into a Money.t" do

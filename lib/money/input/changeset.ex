@@ -65,6 +65,18 @@ if Code.ensure_loaded?(Ecto.Changeset) do
     * The changeset with a `t:Money.t/0` change put on `field`, or
       with an error added if the amount/currency can't be parsed.
 
+    ### Examples
+
+        iex> changeset =
+        ...>   Ecto.Changeset.cast(
+        ...>     {%{}, %{price: :map}},
+        ...>     %{"price" => %{"amount" => "1.234,56", "currency" => "EUR"}},
+        ...>     [:price]
+        ...>   )
+        iex> changeset = Money.Input.Changeset.cast_money(changeset, :price, locale: :de)
+        iex> Ecto.Changeset.get_change(changeset, :price)
+        Money.new(:EUR, "1234.56")
+
     """
     @spec cast_money(Ecto.Changeset.t(), atom(), Keyword.t()) :: Ecto.Changeset.t()
     def cast_money(%Changeset{} = changeset, field, options \\ []) do
@@ -98,6 +110,13 @@ if Code.ensure_loaded?(Ecto.Changeset) do
     ### Returns
 
     * The changeset, with any errors added.
+
+    ### Examples
+
+        iex> changeset = Ecto.Changeset.change({%{price: Money.new(:USD, "10")}, %{price: :map}})
+        iex> changeset = Money.Input.Changeset.validate_money(changeset, :price, currency: :EUR)
+        iex> changeset.errors[:price]
+        {"must be EUR", [validation: :currency]}
 
     """
     @spec validate_money(Ecto.Changeset.t(), atom(), Keyword.t()) :: Ecto.Changeset.t()

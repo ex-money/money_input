@@ -25,7 +25,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
 
     Add the JS hooks in your `assets/js/app.js`:
 
-        import { MoneyInput, CurrencyPicker } from "money_input"
+        import { MoneyInput, CurrencyPicker } from "../../deps/ex_money_input/priv/static/money_input.js"
         let Hooks = {}
         Hooks.MoneyInput = MoneyInput
         Hooks.CurrencyPicker = CurrencyPicker

@@ -1,6 +1,6 @@
 # Changelog
 
-## [v0.3.1] — Unreleased
+## [v0.3.1] — 2026-11-08
 
 ### Added
 
@@ -19,6 +19,8 @@
 * With AutoNumeric loaded, pre-filled amounts in `ar`, `he` and `fa`, and grouped amounts in zero-decimal currencies such as JPY in `de`, no longer start blank or misread.
 
 * `<.money_input>` with an invalid `:locale` and an amount to format no longer raises `Localize.InvalidLocaleError`.
+
+* The README, guides and moduledoc import the hooks and stylesheet from `deps/ex_money_input/priv/static/`. The documented `"money_input"` import and `deps/money_input` paths did not resolve.
 
 ## [v0.3.0] — 2026-07-31
 
