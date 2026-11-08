@@ -125,6 +125,60 @@ defmodule Money.Input.ComponentsTest do
       assert html =~ ~s(data-currency="GBP")
       assert html =~ ~s(value="9,876.54")
     end
+
+    test "formats the value in the process locale when no :locale is given" do
+      {:ok, _} = Localize.put_locale("de")
+
+      html =
+        render_component(&Components.money_input/1, %{
+          form: money_form(Money.new(:EUR, Decimal.new("1234.56"))),
+          field: :price
+        })
+
+      # The value and the separators handed to the JS hook must
+      # come from the same locale.
+      assert html =~ ~s(data-decimal=",")
+      assert html =~ ~s(data-group=".")
+      assert amount_input(html) =~ ~s(value="1.234,56")
+    end
+
+    test "renders the plain amount as data-amount" do
+      cases = [
+        {Money.new(:USD, Decimal.new("1234.56")), "en", "1,234.56", "1234.56"},
+        {Money.new(:JPY, Decimal.new("1234")), "de", "1.234", "1234"},
+        {Money.new(:EUR, Decimal.new("1234.56")), "ar", "‏1,234.56", "1234.56"},
+        {Money.new(:EUR, Decimal.new("-1234.5")), "fr", "-1 234,50", "-1234.5"},
+        {%{"amount" => "1.234,56", "currency" => "EUR"}, "de", "1.234,56", "1234.56"}
+      ]
+
+      for {value, locale, formatted, canonical} <- cases do
+        html =
+          render_component(&Components.money_input/1, %{
+            form: money_form(value),
+            field: :price,
+            locale: locale
+          })
+
+        input = amount_input(html)
+        context = "value=#{inspect(value)} locale=#{locale}"
+        assert input =~ ~s(value="#{formatted}"), context
+        assert input =~ ~s(data-amount="#{canonical}"), context
+      end
+    end
+
+    test "omits data-amount when there is no usable amount" do
+      for value <- [nil, "", %{"amount" => "garbage", "currency" => "EUR"}] do
+        html =
+          render_component(&Components.money_input/1, %{
+            form: money_form(value),
+            field: :price,
+            locale: "en",
+            default_currency: :EUR
+          })
+
+        refute amount_input(html) =~ "data-amount", "value=#{inspect(value)}"
+      end
+    end
   end
 
   describe "currency_picker/1" do
@@ -203,6 +257,15 @@ defmodule Money.Input.ComponentsTest do
   end
 
   # ── helpers ─────────────────────────────────────────────────
+
+  defp money_form(value) do
+    Phoenix.HTML.FormData.to_form(%{"price" => value}, as: :demo)
+  end
+
+  defp amount_input(html) do
+    [input] = Regex.run(~r/<input[^>]*money-input-field[^>]*>/, html)
+    input
+  end
 
   defp money_assigns(field, overrides) do
     form = Phoenix.HTML.FormData.to_form(%{Atom.to_string(field) => "1234.56"}, as: :demo)

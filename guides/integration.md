@@ -83,7 +83,6 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 let liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
   hooks: {
-    NumberInput:    MoneyHooks.NumberInput,
     MoneyInput:     MoneyHooks.MoneyInput,
     CurrencyPicker: MoneyHooks.CurrencyPicker
   }
@@ -300,6 +299,8 @@ is what the form serialises. The server parses it with the
 locale you already have. Path A (no JS) and Path B (AutoNumeric
 loaded) produce *byte-identical* submissions for the same input.
 
+The amount input also carries a `data-amount` attribute holding the plain decimal amount (`"1234.56"`). It travels only from the server to the hook, which uses it to start AutoNumeric and to resync it whenever LiveView updates the field. It is never submitted.
+
 Trade-off: the server must know the locale to parse the
 amount. In practice you already do (it's in the session, the
 assigns, or a `Money.Ecto.Composite.Type` field option), so
@@ -415,6 +416,8 @@ should see no errors and the input should have an `autonumeric`
 class added by AutoNumeric. If neither, confirm
 `MoneyHooks.configure({ AutoNumeric })` runs **before**
 `new LiveSocket(...)`.
+
+**The amount disappears, or shows an old value, when the pointer leaves the field.** Before v0.3.1 the hook did not resync AutoNumeric after LiveView updated the field. Upgrade, and if you copied `money_input.js` into your app (for example under `assets/vendor/`), copy the new file too: the hook reads the `data-amount` attribute the matching component renders.
 
 **`Money.Ecto.Composite.Type` not found.** This type is in
 `money_sql`, a separate package — add `{:money_sql, "~> 1.0"}`

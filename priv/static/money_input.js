@@ -1,9 +1,9 @@
 // MoneyInput Phoenix LiveView hooks.
 //
-// Exports three hooks:
+// Exports two hooks:
 //
-//   NumberInput     — locale-aware live formatting for plain numbers
-//   MoneyInput      — same, with currency-aware precision
+//   MoneyInput      — locale-aware live formatting with
+//                     currency-aware precision
 //   CurrencyPicker  — searchable currency picker (recents, sheet,
 //                     keyboard nav, flag glyphs)
 //
@@ -97,10 +97,31 @@ function mountInput(hook, kind) {
     return;
   }
 
-  hook.an = new AutoNumericCtor(
-    hook.input,
-    buildAutoNumericOptions(data, kind),
-  );
+  hook.kind = kind;
+  hook.options = buildAutoNumericOptions(data, kind);
+
+  // Start from the plain amount the server renders in
+  // `data-amount` ("1234.56"), not from the formatted text.
+  // AutoNumeric cannot parse direction marks (ar, he, fa) and
+  // reads a grouped integer such as "1.234" as 1.234. Passing
+  // the amount to the constructor does not help either: it is
+  // parsed with the locale's separators, so "1234.56" becomes
+  // 123456 in de. Start AutoNumeric on an empty field and hand
+  // it the amount with `set()`, which reads a plain decimal.
+  // With no `data-amount`, AutoNumeric reads the element's own
+  // value as before.
+  const amount = hook.input.dataset.amount;
+  const valueAttribute = hook.input.getAttribute("value");
+  if (amount !== undefined) hook.input.value = "";
+  hook.an = new AutoNumericCtor(hook.input, hook.options);
+  if (amount !== undefined) {
+    hook.an.set(amount);
+    // AutoNumeric copied the emptied value into the `value`
+    // attribute. Put the server's text back: a form reset
+    // restores from it, and LiveView sends the reset value to
+    // the server.
+    if (valueAttribute !== null) hook.input.setAttribute("value", valueAttribute);
+  }
 
   // Deliberately *no* submit-time canonicalisation. The form
   // value is the user's locale-formatted string as they see it
@@ -126,6 +147,38 @@ function mountInput(hook, kind) {
     };
     hook.el.addEventListener("money-input:currency-change", hook.onCurrencyChange);
   }
+}
+
+// LiveView rewrites the value of an unfocused input on every
+// patch without telling AutoNumeric, which keeps its own copy of
+// the number. AutoNumeric rewrites the field from that copy on
+// mouseleave, focus and blur, so a stale copy blanks the field
+// or brings back an old amount. Re-read the locale data and the
+// server's amount after each patch and hand them to AutoNumeric.
+function syncInput(hook) {
+  if (!hook.an) return;
+
+  hook.data = readData(hook.el);
+  const options = buildAutoNumericOptions(hook.data, hook.kind);
+  if (JSON.stringify(options) !== JSON.stringify(hook.options)) {
+    hook.options = options;
+    hook.an.update(options);
+  }
+
+  // LiveView leaves a focused input's value alone, so the user's
+  // typing stays authoritative until they leave the field.
+  if (document.activeElement === hook.input) return;
+
+  const amount = hook.input.dataset.amount;
+  // No `data-amount` and a non-empty value means the server
+  // predates `data-amount`; keep the previous behaviour.
+  if (amount === undefined && hook.input.value !== "") return;
+
+  const target = amount === undefined ? "" : amount;
+  const inSync =
+    hook.an.getNumericString() === target &&
+    hook.input.value === hook.an.getFormatted();
+  if (!inSync) hook.an.set(target);
 }
 
 function destroyInput(hook) {
@@ -160,6 +213,9 @@ function paste_sanitize(event, data) {
 export const MoneyInput = {
   mounted() {
     mountInput(this, "money");
+  },
+  updated() {
+    syncInput(this);
   },
   destroyed() {
     destroyInput(this);

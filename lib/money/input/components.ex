@@ -137,6 +137,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
       assigns =
         assigns
         |> assign_money_field_names()
+        |> assign_money_locale()
         |> assign_money_value()
         |> assign_money_locale_data()
         |> assign_symbol_position()
@@ -177,6 +178,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
           name={@amount_name}
           id={@amount_id}
           value={@formatted_value}
+          data-amount={@canonical_amount}
           class={["money-input-field", text_align_class(@align), @input_class]}
           autocomplete="off"
           dir="ltr"
@@ -385,6 +387,14 @@ if Code.ensure_loaded?(Phoenix.Component) and
 
     # ── Internal: shared assigns ──────────────────────────────
 
+    # Resolve the locale once, before anything formats with it.
+    # The input's value and its `data-decimal` / `data-group`
+    # attributes must come from the same locale, or the JS hook
+    # reads the number with the wrong separators.
+    defp assign_money_locale(assigns) do
+      assign(assigns, :locale, assigns.locale || Localize.get_locale())
+    end
+
     defp assign_money_value(assigns) do
       explicit = assigns.value
       form_value = (assigns.form[assigns.field] || %{}).value
@@ -393,38 +403,59 @@ if Code.ensure_loaded?(Phoenix.Component) and
       {amount, currency_from_value} = extract_amount_and_currency(raw)
       effective_currency = currency_from_value || assigns.default_currency
 
-      formatted = format_amount(amount, effective_currency, assigns.locale)
+      {formatted, canonical} = format_amount(amount, effective_currency, assigns.locale)
 
       assigns
       |> assign(:formatted_value, formatted)
+      |> assign(:canonical_amount, canonical)
       |> assign(:effective_currency, effective_currency)
     end
 
     # Format the amount portion only (no currency symbol) for the
-    # input's `value` attribute. The symbol is rendered as a
-    # separate adornment outside the input. `Money.to_string!`
-    # with `currency_symbol: :none` does the locale-correct
-    # rendering — separators, spacing, and currency-aware
-    # fractional digits (JPY 0, USD 2, BHD 3).
+    # input's `value` attribute, and return the plain decimal
+    # string (`"1234.56"`) for its `data-amount` attribute.
+    #
+    # The symbol is rendered as a separate adornment outside the
+    # input. `Money.to_string/2` with `currency_symbol: :none`
+    # does the locale-correct rendering — separators, spacing,
+    # direction marks and currency-aware fractional digits
+    # (JPY 0, USD 2, BHD 3).
+    #
+    # The JS hook starts AutoNumeric from `data-amount`, never
+    # from the formatted text: AutoNumeric cannot parse direction
+    # marks (`ar`, `he`, `fa`) and reads a grouped integer such
+    # as `"1.234"` as 1.234.
     #
     # `Money.new/3` itself needs the locale to parse a
     # locale-formatted amount string (Path A fallback path) —
     # without it, `"1.234,56"` is read as `"1.23456"`.
-    defp format_amount(nil, _currency, _locale), do: ""
-    defp format_amount("", _currency, _locale), do: ""
-    defp format_amount(_amount, nil, _locale), do: ""
+    #
+    # An unparseable amount (non-empty garbage like "abc") or a
+    # locale that cannot format renders as blank rather than
+    # crashing the page.
+    defp format_amount(nil, _currency, _locale) do
+      {"", nil}
+    end
+
+    defp format_amount("", _currency, _locale) do
+      {"", nil}
+    end
+
+    defp format_amount(_amount, nil, _locale) do
+      {"", nil}
+    end
 
     defp format_amount(amount, currency, locale) do
       case Money.new(currency, amount, locale: locale) do
-        %Money{} = money ->
-          Money.to_string!(money, locale: locale, currency_symbol: :none)
+        %Money{} = money -> format_money(money, locale)
+        {:error, _} -> {"", nil}
+      end
+    end
 
-        # Unparseable amount (non-empty garbage like "abc"). Render
-        # the input as blank — the surrounding template still keeps
-        # the user's raw text in the actual form, so they can
-        # correct it. Better than crashing the whole page.
-        {:error, _} ->
-          ""
+    defp format_money(money, locale) do
+      case Money.to_string(money, locale: locale, currency_symbol: :none) do
+        {:ok, formatted} -> {formatted, Decimal.to_string(money.amount, :normal)}
+        {:error, _} -> {"", nil}
       end
     end
 
@@ -484,7 +515,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
     end
 
     defp assign_money_locale_data(assigns) do
-      locale = assigns[:locale] || Localize.get_locale()
+      locale = assigns.locale
 
       # Components are render-path code — they MUST NOT raise
       # on invalid form input. If the caller-supplied
@@ -512,9 +543,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
             end
         end
 
-      assigns
-      |> assign(:locale, locale)
-      |> assign(:locale_data, locale_data)
+      assign(assigns, :locale_data, locale_data)
     end
 
     defp assign_symbol_position(assigns) do

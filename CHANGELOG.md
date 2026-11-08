@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.3.1] — Unreleased
+
+### Added
+
+* The amount input carries a `data-amount` attribute with the plain decimal amount (`"1234.56"`), which the `MoneyInput` hook uses to start and resync AutoNumeric.
+
+### Fixed
+
+* The `MoneyInput` hook resyncs AutoNumeric after every LiveView update, so the amount no longer disappears or reverts to an old value when the pointer leaves the field. Fixes [#2](https://github.com/ex-money/money_input/issues/2).
+
+* `<.money_input>` without a `:locale` attribute formats the amount in the current locale instead of English, matching the separators it gives the hook.
+
+* With AutoNumeric loaded, pre-filled amounts in `ar`, `he` and `fa`, and grouped amounts in zero-decimal currencies such as JPY in `de`, no longer start blank or misread.
+
+* `<.money_input>` with an invalid `:locale` and an amount to format no longer raises `Localize.InvalidLocaleError`.
+
 ## [v0.3.0] — 2026-07-31
 
 ### Changed

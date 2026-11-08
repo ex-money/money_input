@@ -24,6 +24,16 @@ defmodule Money.Input.AdversarialRenderTest do
       end
     end
 
+    test "renders for every adversarial :locale with an amount to format" do
+      value = Money.new(:USD, Decimal.new("1234.56"))
+
+      for locale <- @bad_atoms ++ @bad_strings do
+        assert_no_raise(fn -> render(:money_input, locale: locale, value: value) end,
+          context: "locale=#{inspect(locale)}"
+        )
+      end
+    end
+
     test "renders for every adversarial :default_currency" do
       for currency <- @bad_currencies do
         assert_no_raise(fn -> render(:money_input, default_currency: currency) end,
