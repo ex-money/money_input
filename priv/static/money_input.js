@@ -132,23 +132,26 @@ function mountInput(hook, kind) {
 
   try {
     hook.an = new AutoNumericCtor(hook.input, hook.options);
+    if (amount !== undefined) hook.an.set(amount);
   } catch (error) {
     // AutoNumeric throws on separators it cannot display, such
-    // as the nqo, gez and ff-Adlm group separators. Keep the
-    // server's text and fall back to the plain input rather
-    // than leave the field blank.
+    // as the nqo, gez and ff-Adlm group separators, and on an
+    // amount outside `data-min` / `data-max` (±10 trillion when
+    // neither is given). Keep the server's text and fall back to
+    // the plain input: a blank field would submit no amount.
+    if (hook.an) hook.an.remove();
     hook.input.value = serverValue;
+    restoreValueAttribute(hook.input, valueAttribute);
     disableAutoNumeric(hook, error);
     return;
   }
 
   if (amount !== undefined) {
-    hook.an.set(amount);
     // AutoNumeric copied the emptied value into the `value`
     // attribute. Put the server's text back: a form reset
     // restores from it, and LiveView sends the reset value to
     // the server.
-    if (valueAttribute !== null) hook.input.setAttribute("value", valueAttribute);
+    restoreValueAttribute(hook.input, valueAttribute);
 
     // On reset AutoNumeric re-reads that text with `set()`, which
     // cannot parse the direction marks it carries in ar and he,
@@ -214,8 +217,7 @@ function syncInput(hook) {
     } catch (error) {
       // The patch switched to a locale whose separators
       // AutoNumeric cannot display. Leave LiveView's value.
-      hook.an.remove();
-      disableAutoNumeric(hook, error);
+      failInput(hook, error);
       return;
     }
   }
@@ -233,7 +235,34 @@ function syncInput(hook) {
   const inSync =
     hook.an.getNumericString() === target &&
     hook.input.value === hook.an.getFormatted();
-  if (!inSync) hook.an.set(target);
+  if (inSync) return;
+
+  try {
+    hook.an.set(target);
+  } catch (error) {
+    // The server sent an amount outside `data-min` / `data-max`.
+    // Leave LiveView's value.
+    failInput(hook, error);
+  }
+}
+
+// Put back the `value` attribute AutoNumeric overwrote when it
+// started on the emptied field.
+function restoreValueAttribute(input, valueAttribute) {
+  if (valueAttribute === null) {
+    input.removeAttribute("value");
+  } else {
+    input.setAttribute("value", valueAttribute);
+  }
+}
+
+// AutoNumeric threw after it started. Remove it, keeping the text
+// in the field, and fall back to the plain input.
+function failInput(hook, error) {
+  const value = hook.input.value;
+  hook.an.remove();
+  hook.input.value = value;
+  disableAutoNumeric(hook, error);
 }
 
 // Without AutoNumeric the form still submits and the server-side
@@ -248,7 +277,7 @@ function usePlainInput(hook) {
 function disableAutoNumeric(hook, error) {
   hook.an = null;
   console.warn(
-    "MoneyInput: AutoNumeric rejected the options for locale " +
+    "MoneyInput: AutoNumeric rejected the options or amount for locale " +
       `${hook.data.locale}; live formatting is off for this field.`,
     error,
   );
@@ -257,7 +286,13 @@ function disableAutoNumeric(hook, error) {
 
 function resetInput(hook) {
   const amount = hook.input.dataset.amount;
-  if (hook.an && amount !== undefined) hook.an.set(amount);
+  if (!hook.an || amount === undefined) return;
+
+  try {
+    hook.an.set(amount);
+  } catch (error) {
+    failInput(hook, error);
+  }
 }
 
 function destroyInput(hook) {

@@ -4,6 +4,8 @@
 
 ### Fixed
 
+* A stored amount outside `:min` / `:max` (±10 trillion when neither is set) is no longer blanked and erased on save, and one the server sends later no longer reverts to the previous amount. The `MoneyInput` hook falls back to the plain input with the server's text when AutoNumeric refuses an amount.
+
 * A paste into the plain amount input reaches `phx-change`, and a padded ` (1,234.56) ` shows as `-1,234.56`. The `MoneyInput` hook cancels the browser's paste to clean the text, which also cancelled its `input` event.
 
 ## [v0.3.2] — 2026-11-09
