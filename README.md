@@ -23,7 +23,7 @@ Money.Input supports **Elixir 1.17** and later on **OTP 26** and later.
 ```elixir
 def deps do
   [
-    {:ex_money_input, "~> 0.3.1"},
+    {:ex_money_input, "~> 0.3.2"},
 
     # Components and changeset bridge:
     {:phoenix_html, "~> 4.0"},
@@ -181,4 +181,4 @@ The full API reference is on [HexDocs](https://hexdocs.pm/ex_money_input).
 
 ## License
 
-Money.Input is released under the Apache License 2.0. See [LICENSE.md](https://github.com/ex-money/money_input/blob/v0.3.1/LICENSE.md).
+Money.Input is released under the Apache License 2.0. See [LICENSE.md](https://github.com/ex-money/money_input/blob/v0.3.2/LICENSE.md).
