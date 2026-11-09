@@ -76,7 +76,7 @@ renders as (prefix-symbol locales, e.g. `en`):
 <div class="money-input-wrapper money-input-money"
      data-money-input="money"
      data-locale="en" data-currency="USD"
-     data-decimal="." data-group=","
+     data-decimal="." data-group="," data-grouping="3,3"
      data-number-system="latn" data-minus="-"
      data-iso-digits="2"
      data-symbol-position="prefix"
@@ -122,7 +122,7 @@ Data attributes for state-driven styling:
 
 * `data-symbol-position="prefix" | "suffix"` — locale-derived. Useful if you want to flip padding asymmetrically by symbol side.
 
-* `data-decimal` / `data-group` / `data-minus` / `data-number-system` / `data-iso-digits` — locale parameters the JS hook reads. Also handy if your stylesheet wants to render the decimal separator next to the input.
+* `data-decimal` / `data-group` / `data-grouping` / `data-minus` / `data-number-system` / `data-iso-digits` — locale parameters the JS hook reads. `data-grouping` is the digit grouping as `first,rest`: `"3,3"` for `1,234,567`, `"3,2"` for the Indian `12,34,567`. Also handy if your stylesheet wants to render the decimal separator next to the input.
 
 * `data-amount` — on the `<input>`: the plain decimal amount (`"1234.50"`) the JS hook starts AutoNumeric from. Absent when the field is empty.
 

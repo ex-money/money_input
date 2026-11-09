@@ -56,6 +56,24 @@ defmodule Money.InputTest do
       end
     end
 
+    test "casts amounts grouped as the locale writes them" do
+      cases = [
+        {"hi", "INR", "1,23,45,67,890.12", "1234567890.12"},
+        {"bn-IN", "INR", "12,34,567.00", "1234567"},
+        {"en-IN", "INR", "1,234,567,890.12", "1234567890.12"},
+        {"tok", "USD", "1\u00A023\u00A045\u00A067,00", "1234567"}
+      ]
+
+      for {locale, currency, text, expected} <- cases do
+        assert {:ok, %Money{amount: amount}} =
+                 Money.Input.Cast.cast(%{"amount" => text, "currency" => currency},
+                   locale: locale
+                 )
+
+        assert Decimal.equal?(amount, Decimal.new(expected)), "#{locale} #{inspect(text)}"
+      end
+    end
+
     test "falls back to :currency option when the map omits it" do
       assert {:ok, %Money{currency: :JPY}} =
                Money.Input.Cast.cast(%{"amount" => "10"}, currency: :JPY)

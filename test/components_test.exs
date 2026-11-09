@@ -16,6 +16,26 @@ defmodule Money.Input.ComponentsTest do
       assert html =~ ~s($</span>)
     end
 
+    test "renders the digit grouping the amount is written with" do
+      cases = [
+        {"en", :USD, "3,3"},
+        {"hi", :INR, "3,2"},
+        {"bn", :INR, "3,2"},
+        {"en-IN", :INR, "3,3"},
+        {"tok", :USD, "2,2"}
+      ]
+
+      for {locale, currency, grouping} <- cases do
+        html =
+          render_component(
+            &Components.money_input/1,
+            money_assigns(:price, default_currency: currency, locale: locale)
+          )
+
+        assert html =~ ~s(data-grouping="#{grouping}"), locale
+      end
+    end
+
     test "renders suffix symbol for de" do
       html =
         render_component(

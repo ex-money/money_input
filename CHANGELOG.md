@@ -2,7 +2,13 @@
 
 ## [v0.3.3] — Unreleased
 
+### Added
+
+* `Money.Input.Currency` has a `:grouping` field, read from the locale's currency pattern without a symbol, which `<.money_input>` renders as `data-grouping` (`"3,2"`) for the `MoneyInput` hook.
+
 ### Fixed
+
+* With AutoNumeric loaded, `hi`, `bn-IN`, `gu`, `te` and the other Indian-grouping locales show `12,34,567` as the server writes it, and `tok` groups in twos, so its amounts of 1,000 or more no longer fail to submit. `en-IN` groups in threes in the field as on the server, where the hook showed `123,45,67,890.12`.
 
 * A stored amount outside `:min` / `:max` (±10 trillion when neither is set) is no longer blanked and erased on save, and one the server sends later no longer reverts to the previous amount. The `MoneyInput` hook falls back to the plain input with the server's text when AutoNumeric refuses an amount.
 

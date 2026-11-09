@@ -22,6 +22,7 @@ defmodule Money.Input.Currency do
   alias Localize.Currency, as: LocalizeCurrency
   alias Localize.LanguageTag
   alias Localize.Number.Format
+  alias Localize.Number.Format.Compiler
   alias Localize.Number.Symbol
   alias Localize.Number.System
   alias Money.Input.NoNumberSymbolsError
@@ -43,6 +44,13 @@ defmodule Money.Input.Currency do
   * `:group` — the locale's grouping separator character.
 
   * `:minus_sign` — the locale's minus sign character.
+
+  * `:grouping` — the integer digit grouping, as `%{first: 3,
+    rest: 3}` (`1,234,567`) or `%{first: 3, rest: 2}` for the
+    Indian system (`12,34,567`). It is read from the locale's
+    currency pattern without a symbol, the one the amount is
+    written with, which groups in threes in `en-IN`, `ta`, `mr`,
+    `ml` and `or` though their other patterns are Indian.
 
   * `:currency` — a `t:Localize.Currency.t/0` for the requested
     currency, or `nil` when no currency was supplied.
@@ -66,6 +74,7 @@ defmodule Money.Input.Currency do
           decimal: String.t(),
           group: String.t(),
           minus_sign: String.t(),
+          grouping: %{first: non_neg_integer(), rest: non_neg_integer()},
           currency: LocalizeCurrency.t() | nil,
           symbol: String.t() | nil,
           symbol_position: :prefix | :suffix | nil,
@@ -79,6 +88,7 @@ defmodule Money.Input.Currency do
     :decimal,
     :group,
     :minus_sign,
+    :grouping,
     :currency,
     :symbol,
     :symbol_position,
@@ -134,6 +144,10 @@ defmodule Money.Input.Currency do
       iex> info.iso_digits
       0
 
+      iex> {:ok, info} = Money.Input.Currency.currency_for_locale(:hi, currency: :INR)
+      iex> info.grouping
+      %{first: 3, rest: 2}
+
   """
   @spec currency_for_locale(LanguageTag.t() | atom() | String.t() | nil, Keyword.t()) ::
           {:ok, t()} | {:error, Exception.t()}
@@ -144,6 +158,7 @@ defmodule Money.Input.Currency do
     with {:ok, language_tag} <- Localize.validate_locale(locale || Localize.get_locale()),
          {:ok, number_system} <- System.number_system_from_locale(language_tag),
          {:ok, symbols} <- resolve_symbols(language_tag, number_system),
+         {:ok, grouping} <- resolve_grouping(language_tag, number_system),
          {:ok, currency} <- resolve_currency(currency_code, language_tag),
          {:ok, symbol_position} <- resolve_symbol_position(currency, language_tag, number_system),
          {:ok, symbol} <- resolve_symbol(currency, symbol_kind) do
@@ -155,6 +170,7 @@ defmodule Money.Input.Currency do
          decimal: symbol_string(symbols.decimal),
          group: symbol_string(symbols.group),
          minus_sign: symbol_string(symbols.minus_sign),
+         grouping: grouping,
          currency: currency,
          symbol: symbol,
          symbol_position: symbol_position,
@@ -203,6 +219,20 @@ defmodule Money.Input.Currency do
   # than silently returning garbage from `Map.values/1`.
   defp symbol_string(value) when is_binary(value), do: value
   defp symbol_string(%{standard: value}) when is_binary(value), do: value
+
+  # ── digit grouping from the CLDR format pattern ───────────
+  #
+  # The component writes the amount with `currency_symbol: :none`,
+  # which formats with the locale's `currency_no_symbol` pattern,
+  # so the grouping comes from that pattern rather than the
+  # standard one.
+
+  defp resolve_grouping(language_tag, number_system) do
+    with {:ok, %{currency_no_symbol: pattern}} <- Format.formats_for(language_tag, number_system),
+         {:ok, meta} <- Compiler.format_to_metadata(pattern) do
+      {:ok, meta.grouping.integer}
+    end
+  end
 
   # ── currency resolution ────────────────────────────────────
 

@@ -157,6 +157,7 @@ if Code.ensure_loaded?(Phoenix.Component) and
         data-currency={@effective_currency && to_string(@effective_currency)}
         data-decimal={@locale_data.decimal}
         data-group={@locale_data.group}
+        data-grouping={grouping_attr(@locale_data.grouping)}
         data-number-system={@locale_data.number_system}
         data-minus={@locale_data.minus_sign}
         data-iso-digits={@locale_data.iso_digits}
@@ -727,6 +728,16 @@ if Code.ensure_loaded?(Phoenix.Component) and
       to_string(value)
     rescue
       Protocol.UndefinedError -> nil
+    end
+
+    # The digit grouping as "first,rest" ("3,2" for 12,34,567),
+    # which the hook maps to AutoNumeric's group spacing.
+    defp grouping_attr(%{first: first, rest: rest}) do
+      "#{first},#{rest}"
+    end
+
+    defp grouping_attr(_grouping) do
+      nil
     end
 
     defp text_align_class(:left), do: "text-left"

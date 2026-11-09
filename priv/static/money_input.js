@@ -37,6 +37,7 @@ function readData(el) {
     locale: d.locale || "en",
     decimal: d.decimal || ".",
     group: d.group || ",",
+    grouping: d.grouping || "3,3",
     minus: d.minus || "-",
     numberSystem: d.numberSystem || "latn",
     integer: d.integer === "true",
@@ -69,6 +70,16 @@ function latinDigits(data) {
   return data.numberSystem === "latn";
 }
 
+// AutoNumeric's group spacing for the grouping the server writes
+// the amount with, from `data-grouping` ("first,rest"). "2t" is
+// the Indian system (12,34,567); `tok` groups in twos. Anything
+// else groups in threes.
+const GROUP_SPACING = { "3,3": "3", "3,2": "2t", "2,2": "2", "4,4": "4" };
+
+function autoNumericGroupSpacing(grouping) {
+  return GROUP_SPACING[grouping] || "3";
+}
+
 function buildAutoNumericOptions(data, kind) {
   const decimals =
     kind === "money"
@@ -90,7 +101,7 @@ function buildAutoNumericOptions(data, kind) {
     minimumValue: data.min ?? "-10000000000000",
     maximumValue: data.max ?? "10000000000000",
     onInvalidPaste: "clamp",
-    digitalGroupSpacing: data.locale && data.locale.startsWith("en-IN") ? "2s" : "3",
+    digitalGroupSpacing: autoNumericGroupSpacing(data.grouping),
   };
   return opts;
 }
