@@ -271,24 +271,29 @@ function destroyInput(hook) {
     );
 }
 
+// Clean a paste into the plain input (no AutoNumeric, a locale
+// with digits of its own, or one AutoNumeric rejected): dashes and
+// accounting parentheses become a minus sign, and the ends are
+// trimmed. ex_money reads en and em dashes as a minus sign in only
+// some locales. Space characters are left alone, since it reads any
+// of them as the group separator in a locale that groups with a
+// space. Cancelling the paste also cancels the browser's `input`
+// event, so fire one for `phx-change`.
 function paste_sanitize(event, data) {
-  // Pre-AutoNumeric paste handler used only in the fallback path.
-  // Strip obvious decorations so the server-side parser doesn't
-  // have to.
   const text = (event.clipboardData || window.clipboardData).getData("text");
   if (!text) return;
   event.preventDefault();
   const cleaned = text
-    .replace(/[   ]/g, " ")
-    .replace(/[−–—]/g, "-")
-    .replace(/^\((.*)\)$/, "-$1")
-    .trim();
+    .trim()
+    .replace(/[\u2212\u2013\u2014]/g, "-")
+    .replace(/^\(\s*(.*?)\s*\)$/, "-$1");
   const input = event.target;
   const start = input.selectionStart || 0;
   const end = input.selectionEnd || 0;
   input.value = input.value.slice(0, start) + cleaned + input.value.slice(end);
   const cursor = start + cleaned.length;
   input.setSelectionRange(cursor, cursor);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 export const MoneyInput = {

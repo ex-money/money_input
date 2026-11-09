@@ -38,6 +38,24 @@ defmodule Money.InputTest do
       end
     end
 
+    test "casts a paste as the hook leaves it, with any space as the group" do
+      cases = [
+        {"fr", "1 234,56", "1234.56"},
+        {"fr", "1\u00A0234,56", "1234.56"},
+        {"fr", "1\u202F234,56", "1234.56"},
+        {"ru", "1\u2009234,56", "1234.56"},
+        {"de", "-1.234,56", "-1234.56"},
+        {"fa", "-\u06F1\u066C\u06F2\u06F3\u06F4\u066B\u06F5\u06F6", "-1234.56"}
+      ]
+
+      for {locale, text, expected} <- cases do
+        assert {:ok, %Money{amount: amount}} =
+                 Money.Input.Cast.cast(%{"amount" => text, "currency" => "EUR"}, locale: locale)
+
+        assert Decimal.equal?(amount, Decimal.new(expected)), "#{locale} #{inspect(text)}"
+      end
+    end
+
     test "falls back to :currency option when the map omits it" do
       assert {:ok, %Money{currency: :JPY}} =
                Money.Input.Cast.cast(%{"amount" => "10"}, currency: :JPY)

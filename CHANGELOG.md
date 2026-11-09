@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.3.3] — Unreleased
+
+### Fixed
+
+* A paste into the plain amount input reaches `phx-change`, and a padded ` (1,234.56) ` shows as `-1,234.56`. The `MoneyInput` hook cancels the browser's paste to clean the text, which also cancelled its `input` event.
+
 ## [v0.3.2] — 2026-11-09
 
 ### Changed
