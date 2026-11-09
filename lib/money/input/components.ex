@@ -450,7 +450,8 @@ if Code.ensure_loaded?(Phoenix.Component) and
     # input. `Money.to_string/2` with `currency_symbol: :none`
     # does the locale-correct rendering — separators, spacing,
     # direction marks and currency-aware fractional digits
-    # (JPY 0, USD 2, BHD 3).
+    # (JPY 0, USD 2, BHD 3), never rounding an amount stored with
+    # more.
     #
     # The JS hook starts AutoNumeric from `data-amount`, never
     # from the formatted text: AutoNumeric cannot parse direction
@@ -488,10 +489,35 @@ if Code.ensure_loaded?(Phoenix.Component) and
     end
 
     defp format_money(money, language_tag) do
-      case Money.to_string(money, locale: language_tag, currency_symbol: :none) do
+      options = [locale: language_tag, currency_symbol: :none] ++ fraction_digit_options(money)
+
+      case Money.to_string(money, options) do
         {:ok, formatted} -> {formatted, Decimal.to_string(money.amount, :normal)}
         {:error, _} -> {"", nil}
       end
+    end
+
+    # The currency's digits stay the minimum (USD "100.00", JPY
+    # "1,234"), but an amount stored with more is written with all
+    # of them ("1.2345") instead of rounded, so saving the form
+    # unchanged does not change it and the validator can report the
+    # extra digits. Trailing zeros past the minimum are dropped.
+    defp fraction_digit_options(%Money{currency: code, amount: amount}) do
+      case Money.Currency.currency_for_code(code) do
+        {:ok, %{digits: digits}} when is_integer(digits) ->
+          [max_fractional_digits: max(digits, fraction_digits(amount))]
+
+        _other ->
+          []
+      end
+    end
+
+    defp fraction_digits(%Decimal{coef: coef, exp: exp}) when is_integer(coef) do
+      max(0, -exp)
+    end
+
+    defp fraction_digits(_amount) do
+      0
     end
 
     # money_input receives values in four shapes; we normalise to

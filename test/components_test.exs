@@ -16,6 +16,31 @@ defmodule Money.Input.ComponentsTest do
       assert html =~ ~s($</span>)
     end
 
+    test "renders a stored amount with all its digits, never rounded" do
+      cases = [
+        {Money.new(:USD, "1.2345"), "en", "1.2345", "1.2345"},
+        {Money.new(:JPY, "1234.5"), "ja", "1,234.5", "1234.5"},
+        {Money.new(:BHD, "1.23456"), "en", "1.23456", "1.23456"},
+        {Money.new(:EUR, "1234.5678"), "de", "1.234,5678", "1234.5678"},
+        {Money.new(:COP, "1234.5"), "en", "1,234.5", "1234.5"},
+        {Money.new(:USD, "1234.5"), "en", "1,234.50", "1234.5"},
+        {Money.new(:USD, "1.2300"), "en", "1.23", "1.2300"},
+        {Money.new(:USD, "100"), "en", "100.00", "100"},
+        {Money.new(:JPY, "1234"), "ja", "1,234", "1234"},
+        {Money.new(:COP, "1234"), "en", "1,234", "1234"}
+      ]
+
+      for {money, locale, formatted, amount} <- cases do
+        form = Phoenix.HTML.FormData.to_form(%{"price" => money}, as: :demo)
+        assigns = %{form: form, field: :price, locale: locale}
+        html = render_component(&Components.money_input/1, assigns)
+        context = "#{inspect(money)} #{locale}"
+
+        assert html =~ ~s(value="#{formatted}"), context
+        assert html =~ ~s(data-amount="#{amount}"), context
+      end
+    end
+
     test "renders the digit grouping the amount is written with" do
       cases = [
         {"en", :USD, "3,3"},

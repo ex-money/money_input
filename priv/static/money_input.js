@@ -80,11 +80,23 @@ function autoNumericGroupSpacing(grouping) {
   return GROUP_SPACING[grouping] || "3";
 }
 
-function buildAutoNumericOptions(data, kind) {
-  const decimals =
+// Fraction digits in a plain amount, without trailing zeros:
+// "1.2345" has 4, "1234.50" has 1.
+function amountDecimals(amount) {
+  const fraction = (amount || "").split(".")[1] || "";
+  return fraction.replace(/0+$/, "").length;
+}
+
+// The currency's digits, or more when the server's amount has
+// more: AutoNumeric rounds to `decimalPlaces` when it is handed
+// the amount, and the rounded value would be saved. The server
+// shows such an amount whole for the validator to report.
+function buildAutoNumericOptions(data, kind, amount) {
+  const configured =
     kind === "money"
       ? data.isoDigits ?? 2
       : data.decimals ?? (data.integer ? 0 : 6);
+  const decimals = Math.max(configured, amountDecimals(amount));
 
   const opts = {
     decimalCharacter: data.decimal,
@@ -124,7 +136,7 @@ function mountInput(hook, kind) {
   }
 
   hook.kind = kind;
-  hook.options = buildAutoNumericOptions(data, kind);
+  hook.options = buildAutoNumericOptions(data, kind, hook.input.dataset.amount);
 
   // Start from the plain amount the server renders in
   // `data-amount` ("1234.56"), not from the formatted text,
@@ -220,7 +232,7 @@ function syncInput(hook) {
     return;
   }
 
-  const options = buildAutoNumericOptions(hook.data, hook.kind);
+  const options = buildAutoNumericOptions(hook.data, hook.kind, hook.input.dataset.amount);
   if (JSON.stringify(options) !== JSON.stringify(hook.options)) {
     hook.options = options;
     try {
