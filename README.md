@@ -98,7 +98,7 @@ And in your CSS:
 @import "../../deps/ex_money_input/priv/static/money_input.css";
 ```
 
-Without AutoNumeric loaded the inputs still work — only live formatting and cursor preservation are absent.
+Without AutoNumeric loaded the inputs still work — only live formatting and cursor preservation are absent. The same plain input is used in locales with digits of their own, such as `fa`, `ar-SA` and `bn`, because AutoNumeric only writes Latin digits.
 
 ## Headless API
 

@@ -417,6 +417,8 @@ class added by AutoNumeric. If neither, confirm
 `MoneyHooks.configure({ AutoNumeric })` runs **before**
 `new LiveSocket(...)`.
 
+In locales with digits of their own (`fa`, `ar-SA`, `bn`, `mr` and others), the field stays a plain input by design: AutoNumeric only writes Latin digits. A console warning starting `MoneyInput: AutoNumeric rejected the options` means AutoNumeric refused that locale's separators, so the field works as a plain input instead.
+
 **The amount disappears, or shows an old value, when the pointer leaves the field.** Before v0.3.1 the hook did not resync AutoNumeric after LiveView updated the field. Upgrade, and if you copied `money_input.js` into your app (for example under `assets/vendor/`), copy the new file too: the hook reads the `data-amount` attribute the matching component renders.
 
 **`Money.Ecto.Composite.Type` not found.** This type is in

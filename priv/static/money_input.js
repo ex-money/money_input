@@ -49,6 +49,26 @@ function readData(el) {
   };
 }
 
+// AutoNumeric takes a minus sign of exactly one character. CLDR
+// wraps the minus in direction marks in many locales (ar, he, fa,
+// ckb, sd: "‎-", "؜-", "‎−"), which AutoNumeric
+// rejects by throwing. Drop the marks, and use "-" if anything
+// other than one character is left.
+const DIRECTION_MARKS = /[‎‏؜]/g;
+
+function autoNumericMinus(minus) {
+  const bare = (minus || "-").replace(DIRECTION_MARKS, "");
+  return [...bare].length === 1 ? bare : "-";
+}
+
+// AutoNumeric only writes Latin digits. Locales with digits of
+// their own (ar-BH, fa, bn, mr…) render the amount in those
+// digits, and the server cannot read Latin digits back with
+// Arabic separators, so those fields stay plain inputs.
+function latinDigits(data) {
+  return data.numberSystem === "latn";
+}
+
 function buildAutoNumericOptions(data, kind) {
   const decimals =
     kind === "money"
@@ -59,7 +79,7 @@ function buildAutoNumericOptions(data, kind) {
     decimalCharacter: data.decimal,
     digitGroupSeparator: data.group,
     decimalCharacterAlternative: data.decimal === "." ? "," : ".",
-    negativeSignCharacter: data.minus,
+    negativeSignCharacter: autoNumericMinus(data.minus),
     decimalPlaces: decimals,
     decimalPlacesShownOnFocus: decimals,
     decimalPlacesShownOnBlur: decimals,
@@ -87,13 +107,8 @@ function mountInput(hook, kind) {
   const data = readData(hook.el);
   hook.data = data;
 
-  if (!AutoNumericCtor) {
-    // No-JS fallback. The form still submits; the server-side
-    // parser still accepts the locale-typed string. We only lose
-    // the live formatting + cursor preservation.
-    hook.input.addEventListener("paste", (event) =>
-      paste_sanitize(event, data),
-    );
+  if (!AutoNumericCtor || !latinDigits(data)) {
+    usePlainInput(hook);
     return;
   }
 
@@ -101,19 +116,32 @@ function mountInput(hook, kind) {
   hook.options = buildAutoNumericOptions(data, kind);
 
   // Start from the plain amount the server renders in
-  // `data-amount` ("1234.56"), not from the formatted text.
-  // AutoNumeric cannot parse direction marks (ar, he, fa) and
-  // reads a grouped integer such as "1.234" as 1.234. Passing
-  // the amount to the constructor does not help either: it is
-  // parsed with the locale's separators, so "1234.56" becomes
-  // 123456 in de. Start AutoNumeric on an empty field and hand
-  // it the amount with `set()`, which reads a plain decimal.
-  // With no `data-amount`, AutoNumeric reads the element's own
-  // value as before.
+  // `data-amount` ("1234.56"), not from the formatted text,
+  // which can carry direction marks, and in which a grouped
+  // integer such as "1.234" reads as 1.234. Passing the amount
+  // to the constructor does not help either: it is parsed with
+  // the locale's separators, so "1234.56" becomes 123456 in de.
+  // Start AutoNumeric on an empty field and hand it the amount
+  // with `set()`, which reads a plain decimal. With no
+  // `data-amount`, AutoNumeric reads the element's own value as
+  // before.
   const amount = hook.input.dataset.amount;
   const valueAttribute = hook.input.getAttribute("value");
+  const serverValue = hook.input.value;
   if (amount !== undefined) hook.input.value = "";
-  hook.an = new AutoNumericCtor(hook.input, hook.options);
+
+  try {
+    hook.an = new AutoNumericCtor(hook.input, hook.options);
+  } catch (error) {
+    // AutoNumeric throws on separators it cannot display, such
+    // as the nqo, gez and ff-Adlm group separators. Keep the
+    // server's text and fall back to the plain input rather
+    // than leave the field blank.
+    hook.input.value = serverValue;
+    disableAutoNumeric(hook, error);
+    return;
+  }
+
   if (amount !== undefined) {
     hook.an.set(amount);
     // AutoNumeric copied the emptied value into the `value`
@@ -121,6 +149,16 @@ function mountInput(hook, kind) {
     // restores from it, and LiveView sends the reset value to
     // the server.
     if (valueAttribute !== null) hook.input.setAttribute("value", valueAttribute);
+
+    // On reset AutoNumeric re-reads that text with `set()`, which
+    // cannot parse the direction marks it carries in ar and he,
+    // and blanks the field. Hand it the server's plain amount
+    // once AutoNumeric has finished its own reset.
+    if (hook.input.form) {
+      hook.form = hook.input.form;
+      hook.onReset = () => setTimeout(() => resetInput(hook), 0);
+      hook.form.addEventListener("reset", hook.onReset);
+    }
   }
 
   // Deliberately *no* submit-time canonicalisation. The form
@@ -137,7 +175,7 @@ function mountInput(hook, kind) {
       const newCurrency = event.detail && event.detail.currency;
       const newDigits = event.detail && event.detail.isoDigits;
       if (newCurrency) hook.el.dataset.currency = newCurrency;
-      if (typeof newDigits === "number") {
+      if (typeof newDigits === "number" && hook.an) {
         hook.an.update({
           decimalPlaces: newDigits,
           decimalPlacesShownOnFocus: newDigits,
@@ -159,10 +197,27 @@ function syncInput(hook) {
   if (!hook.an) return;
 
   hook.data = readData(hook.el);
+
+  // The patch switched to a locale with its own digits.
+  if (!latinDigits(hook.data)) {
+    hook.an.remove();
+    hook.an = null;
+    usePlainInput(hook);
+    return;
+  }
+
   const options = buildAutoNumericOptions(hook.data, hook.kind);
   if (JSON.stringify(options) !== JSON.stringify(hook.options)) {
     hook.options = options;
-    hook.an.update(options);
+    try {
+      hook.an.update(options);
+    } catch (error) {
+      // The patch switched to a locale whose separators
+      // AutoNumeric cannot display. Leave LiveView's value.
+      hook.an.remove();
+      disableAutoNumeric(hook, error);
+      return;
+    }
   }
 
   // LiveView leaves a focused input's value alone, so the user's
@@ -181,8 +236,34 @@ function syncInput(hook) {
   if (!inSync) hook.an.set(target);
 }
 
+// Without AutoNumeric the form still submits and the server-side
+// parser still accepts the locale-typed string. Only the live
+// formatting and cursor preservation are lost.
+function usePlainInput(hook) {
+  if (hook.onPaste) return;
+  hook.onPaste = (event) => paste_sanitize(event, hook.data);
+  hook.input.addEventListener("paste", hook.onPaste);
+}
+
+function disableAutoNumeric(hook, error) {
+  hook.an = null;
+  console.warn(
+    "MoneyInput: AutoNumeric rejected the options for locale " +
+      `${hook.data.locale}; live formatting is off for this field.`,
+    error,
+  );
+  usePlainInput(hook);
+}
+
+function resetInput(hook) {
+  const amount = hook.input.dataset.amount;
+  if (hook.an && amount !== undefined) hook.an.set(amount);
+}
+
 function destroyInput(hook) {
   if (hook.an) hook.an.remove();
+  if (hook.onPaste) hook.input.removeEventListener("paste", hook.onPaste);
+  if (hook.onReset) hook.form.removeEventListener("reset", hook.onReset);
   if (hook.onCurrencyChange)
     hook.el.removeEventListener(
       "money-input:currency-change",

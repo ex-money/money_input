@@ -17,6 +17,27 @@ defmodule Money.InputTest do
       assert Decimal.equal?(money.amount, Decimal.new("1234.56"))
     end
 
+    test "casts the server's own text in locales with their own digits" do
+      for locale <- ["fa", "ar-SA", "bn"] do
+        text =
+          Money.to_string!(Money.new(:USD, "-1234.56"), locale: locale, currency_symbol: :none)
+
+        assert {:ok, %Money{amount: amount}} =
+                 Money.Input.Cast.cast(%{"amount" => text, "currency" => "USD"}, locale: locale)
+
+        assert Decimal.equal?(amount, Decimal.new("-1234.56")), "locale=#{locale}"
+      end
+    end
+
+    test "casts the text the hook displays, without direction marks" do
+      for {locale, text} <- [{"ar", "-1,234.56"}, {"he", "-1,234.56"}, {"eu", "−1.234,56"}] do
+        assert {:ok, %Money{amount: amount}} =
+                 Money.Input.Cast.cast(%{"amount" => text, "currency" => "USD"}, locale: locale)
+
+        assert Decimal.equal?(amount, Decimal.new("-1234.56")), "locale=#{locale}"
+      end
+    end
+
     test "falls back to :currency option when the map omits it" do
       assert {:ok, %Money{currency: :JPY}} =
                Money.Input.Cast.cast(%{"amount" => "10"}, currency: :JPY)

@@ -105,7 +105,7 @@ defmodule MoneyInput.MixProject do
 
   defp deps do
     [
-      {:ex_money, "~> 6.2"},
+      {:ex_money, "~> 6.3"},
       {:localize, "~> 1.0"},
       {:phoenix_html, "~> 4.0", optional: true},
       {:phoenix_live_view, "~> 1.0", optional: true},

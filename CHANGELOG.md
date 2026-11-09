@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.3.2] — Unreleased
+
+### Changed
+
+* Requires `ex_money ~> 6.3`, and so `localize ~> 1.5`.
+
+* In locales with digits of their own (`fa`, `ar-SA`, `bn`, `mr` and others) the `MoneyInput` hook leaves the field a plain input, since AutoNumeric only writes Latin digits and the server could not read them back with Arabic separators.
+
+### Fixed
+
+* The `MoneyInput` hook no longer blanks the amount in `ar`, `he`, `ur` and other locales whose minus sign carries a direction mark, and falls back to a plain input if AutoNumeric rejects a locale's separators.
+
+* A form reset restores the amount in `ar` and `he` instead of blanking it.
+
+* `<.money_input>` and `Money.Input.Cast` no longer raise `BadMapError` on a string amount in locales such as `fa`, `ar-SA` and `bn`; the fix is in ex_money 6.3.
+
 ## [v0.3.1] — 2026-11-08
 
 ### Added
@@ -18,7 +34,7 @@
 
 * `<.money_input>` without a `:locale` attribute formats the amount in the current locale instead of English, matching the separators it gives the hook.
 
-* With AutoNumeric loaded, pre-filled amounts in `ar`, `he` and `fa`, and grouped amounts in zero-decimal currencies such as JPY in `de`, no longer start blank or misread.
+* With AutoNumeric loaded, grouped amounts in zero-decimal currencies such as JPY in `de` no longer start misread.
 
 * `<.money_input>` with an invalid `:locale` and an amount to format no longer raises `Localize.InvalidLocaleError`.
 

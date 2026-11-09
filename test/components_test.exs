@@ -233,6 +233,24 @@ defmodule Money.Input.ComponentsTest do
       assert html =~ "US-Dollar"
     end
 
+    test "a submitted amount renders in locales with their own digits" do
+      for locale <- ["fa", "ar-SA", "bn"] do
+        text =
+          Money.to_string!(Money.new(:USD, "1234.56"), locale: locale, currency_symbol: :none)
+
+        html =
+          render_component(&Components.money_input/1, %{
+            form: money_form(%{"amount" => text, "currency" => "USD"}),
+            field: :price,
+            locale: locale
+          })
+
+        context = "locale=#{locale}"
+        assert amount_input(html) =~ ~s(value="#{text}"), context
+        assert amount_input(html) =~ ~s(data-amount="1234.56"), context
+      end
+    end
+
     test "an invalid locale renders without locale data" do
       input_html =
         render_component(&Components.money_input/1, %{
