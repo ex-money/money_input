@@ -53,7 +53,9 @@ defmodule Money.Input.Currency do
     `ml` and `or` though their other patterns are Indian.
 
   * `:currency` — a `t:Localize.Currency.t/0` for the requested
-    currency, or `nil` when no currency was supplied.
+    currency, or `nil` when no currency was supplied. A currency
+    the locale does not list is read from the locale's parents
+    and then the default locale, as `Money.to_string/2` writes it.
 
   * `:symbol` — the currency symbol resolved per
     `Localize.Currency.symbol/2` (kind selected via the
@@ -235,11 +237,16 @@ defmodule Money.Input.Currency do
   end
 
   # ── currency resolution ────────────────────────────────────
+  #
+  # A locale names only some currencies. One it does not name takes its
+  # symbol from the locale's parents and then the default locale, which is
+  # where `Money.to_string/2` takes it from when it writes the amount, and
+  # its digits are the currency's own.
 
   defp resolve_currency(nil, _language_tag), do: {:ok, nil}
 
   defp resolve_currency(code, language_tag) do
-    LocalizeCurrency.currency_for_code(code, locale: language_tag)
+    LocalizeCurrency.currency_for_code(code, locale: language_tag, fallback: true)
   end
 
   # ── symbol position from the CLDR format pattern ──────────

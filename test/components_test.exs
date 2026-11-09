@@ -61,6 +61,18 @@ defmodule Money.Input.ComponentsTest do
       end
     end
 
+    test "renders the symbol and iso digits of a currency the locale does not list" do
+      html =
+        render_component(
+          &Components.money_input/1,
+          money_assigns(:price, default_currency: :BHD, locale: "az-Cyrl")
+        )
+
+      assert html =~ ~s(data-currency="BHD")
+      assert html =~ ~s(data-iso-digits="3")
+      assert html =~ "BHD</span>"
+    end
+
     test "renders suffix symbol for de" do
       html =
         render_component(

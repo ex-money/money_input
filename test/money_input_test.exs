@@ -205,5 +205,18 @@ defmodule Money.InputTest do
       assert {:error, %Localize.InvalidLocaleError{}} =
                Money.Input.Currency.currency_for_locale("xx-XX")
     end
+
+    test "a currency the locale does not list is read from its parents and the default locale" do
+      for {locale, code, symbol, digits} <- [{"az-Cyrl", :BHD, "BHD", 3}, {"ady", :KWD, "KWD", 3}] do
+        refute match?({:ok, _}, Localize.Currency.currency_for_code(code, locale: locale))
+        assert {:ok, data} = Money.Input.Currency.currency_for_locale(locale, currency: code)
+        assert {data.symbol, data.iso_digits} == {symbol, digits}, "#{locale} #{code}"
+      end
+    end
+
+    test "an unknown currency is still an error" do
+      assert {:error, %Localize.UnknownCurrencyError{}} =
+               Money.Input.Currency.currency_for_locale(:en, currency: :ZZZ)
+    end
   end
 end

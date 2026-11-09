@@ -8,6 +8,8 @@
 
 ### Fixed
 
+* A currency the locale does not list, such as BHD in `az-Cyrl`, shows its symbol and sends `data-iso-digits` to the hook, where 14,020 locale and currency pairs in 508 locales showed neither. The symbol is read from the locale's parents and then the default locale, as `Money.to_string/2` writes it.
+
 * An amount stored with more digits than its currency allows is shown with all of them, where the server and the `MoneyInput` hook rounded it (`1.2345` USD showed `1.23`, `1234.5` JPY `1,235`) and an unchanged save stored the rounded amount. `Money.Input.Validator` now reports the extra digits instead.
 
 * With AutoNumeric loaded, `hi`, `bn-IN`, `gu`, `te` and the other Indian-grouping locales show `12,34,567` as the server writes it, and `tok` groups in twos, so its amounts of 1,000 or more no longer fail to submit. `en-IN` groups in threes in the field as on the server, where the hook showed `123,45,67,890.12`.
