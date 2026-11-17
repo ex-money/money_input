@@ -1,10 +1,14 @@
 # Changelog
 
-## [v0.3.3] — Unreleased
+## [v0.3.3] — 2026-11-18
 
 ### Added
 
 * `Money.Input.Currency` has a `:grouping` field, read from the locale's currency pattern without a symbol, which `<.money_input>` renders as `data-grouping` (`"3,2"`) for the `MoneyInput` hook.
+
+### Changed
+
+* Requires `localize ~> 1.7` and `ex_money ~> 6.3 and >= 6.3.1`. localize 1.7 formats a currency the locale does not list, which blanked the field in 72 locales, and ex_money 6.3.1 rounds and validates such a currency in any process locale.
 
 ### Fixed
 

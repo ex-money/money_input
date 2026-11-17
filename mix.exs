@@ -2,7 +2,7 @@ defmodule MoneyInput.MixProject do
   use Mix.Project
 
   # Also change the version in package.json
-  @version "0.3.2"
+  @version "0.3.3"
   @source_url "https://github.com/ex-money/money_input"
 
   def project do
@@ -105,8 +105,8 @@ defmodule MoneyInput.MixProject do
 
   defp deps do
     [
-      {:ex_money, "~> 6.3"},
-      {:localize, "~> 1.0"},
+      {:ex_money, "~> 6.3 and >= 6.3.1"},
+      {:localize, "~> 1.7"},
       {:phoenix_html, "~> 4.0", optional: true},
       {:phoenix_live_view, "~> 1.0", optional: true},
       {:ecto, "~> 3.10", optional: true},
